@@ -5,44 +5,22 @@ from traceback import print_exc
 from math import ceil
 from itertools import combinations
 
+from util import *
+
 if sys.version_info[0] == 2: range = xrange
 
-SMALL_PRIMES = (3, 5, 7, 11, 13, 17)
-
-def gcd_small_primes(p):
-    return (r for r in SMALL_PRIMES if gcd(p-1, r) == 1)
-
-# BLS scalar field
-def bls_scalar(x):
-    return cyclotomic_polynomial(12)(x)
-
-# BLS base field
-def bls_base(x, r = 0):
-    if r == 0:
-        tmp = (x-1)^2 * cyclotomic_polynomial(12)(x) / 3 + x
-        if tmp.is_integer():
-            return Integer(tmp)
-    else:
-        tmp = (x-1)^2 * r / 3 + x
-        if tmp.is_integer():
-            return Integer(tmp)
-    return 0
-
-def twoadicity(x, base=0, limit=64):
-    return max(i for i in range(base, limit) if ((x-1) % (1<<i) == 0))
-
-def h_weight(x):
-    return x.binary().count('1')
-
-# storing parameters of valid BLS12 curves of 2-adicity alpha and Hamming weight <= weight (with log2(p) < 384 or log2(p) < 446)
+# Outputs parameters of valid BLS12 curves of 2-adicity alpha (scalar field) and bounded Hamming weight (generator)
+# The output list stores triplets generator, weight and adicity and is sorted by default by Hamming weights.
+# Considers non-conservative parameters (Base field prime < 384 bits) or conservative ones (Base field prime < 448 bits)
 def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = False, wid = 0, processes = 1, verbose=True):
+    assert(weight_start > 0)
     adicity = adicity // 2
-    assert(adicity <= 60)
     L = []
     if conservative:
-        limit = 74 # Base field size < 446bits
+        limit = 74 # Base field size < 448bits
     else:
         limit = 64 # Base field size < 384bits
+    assert(adicity <= limit - weight_end)
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
@@ -50,7 +28,7 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
         output = "Weight %s\n" % (weight+1)
         output += "\tTotal cases: %s\n" % len(List)
         for item in List:
-            x = ["0" for k in range(limit)] # to start already at 255 bits for r
+            x = ["0" for k in range(limit)] # to start already at desired size for r
             x[0] = "1"
             for i in item:
                 x[i] = "1"
@@ -132,9 +110,9 @@ Args:
 
     if len(result_list) > 1:
         if sortadicity:
-            result_list.sort(key = lambda x: (-x[2], x[1])) # sorting by 2-adicity first
+            result_list.sort(key = lambda x: (x[2], -x[1])) # sorting by 2-adicity first
         else:
-            result_list.sort(key = lambda x: (x[1], -x[2])) # sorting by weight first
+            result_list.sort(key = lambda x: (-x[1], x[2])) # sorting by weight first
         result_list.reverse()
 
     if save:
