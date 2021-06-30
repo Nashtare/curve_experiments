@@ -24,7 +24,7 @@ def bls_base(x, r = 0):
     return Integer(0)
 
 # Outputs 2-adicity of a number
-def twoadicity(x, base=0, limit=64):
+def twoadicity(x, base=0, limit=256):
     return max(i for i in range(base, limit) if ((x-1) % (1<<i) == 0))
 
 # Outputs Hamming weight of a number

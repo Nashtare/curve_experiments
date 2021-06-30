@@ -3,7 +3,7 @@ import sys
 from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from math import ceil
-from itertools import combinations
+from itertools import combinations, combinations_with_replacement
 
 from util import *
 
@@ -12,7 +12,7 @@ if sys.version_info[0] == 2: range = xrange
 # Outputs parameters of valid BLS12 curves of 2-adicity alpha (scalar field) and bounded Hamming weight (generator)
 # The output list stores triplets generator, weight and adicity and is sorted by default by Hamming weights.
 # Considers non-conservative parameters (Base field prime < 384 bits) or conservative ones (Base field prime < 448 bits)
-def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = False, wid = 0, processes = 1, verbose=True):
+def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = False, wid = 0, processes = 1, extended = False, verbose=True):
     assert(weight_start > 0)
     adicity = adicity // 2
     L = []
@@ -24,32 +24,46 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
-        List = list(combinations((i for i in range(1, limit-adicity)), weight))
+        List_wx = list(combinations(range(adicity+1, limit-2), weight))
+        if extended:
+            List_sign_wx = list(combinations_with_replacement(range(0, 2), weight))
+        else:
+            List_sign_wx = [[0 for i in range(weight)]]
         output = "Weight %s\n" % (weight+1)
-        output += "\tTotal cases: %s\n" % len(List)
-        for item in List:
-            x = ["0" for k in range(limit)] # to start already at desired size for r
-            x[0] = "1"
-            for i in item:
-                x[i] = "1"
-            x = Integer(int("0b" + "".join(x),2))
-            r = bls_scalar(x)
-            if (conservative and r.nbits() > 297) or (not conservative and r.nbits() > 255):
-                continue
-            if gcd_small_primes(r) == None:
-                continue
-            if r.is_pseudoprime() :
-                w = h_weight(x)
-                ad = twoadicity(r)
-                p = bls_base(x, r)
-                if p.is_pseudoprime():
-                    L.append([x, w, ad])
-                    count += 1
-                p = bls_base(-x, r)
-                if p.is_pseudoprime():
-                    L.append([-x, w, ad])
-                    count += 1
-        output += "\tValid cases: %s (%s" % (count, round(1.0 * count / len(List), 4))
+        total = len(List_wx) * len(List_sign_wx)
+        output += "\tTotal cases: %s\n" % total
+        for item in List_wx:
+            x = 1<<(limit-1) # to start already at desired size for r
+            for sign in List_sign_wx:
+                for i in range(len(sign)):
+                    x = x + (1<<item[i]) if sign[i] == 0 else x - (1<<item[i])
+                r = bls_scalar(x)
+                if (conservative and r.nbits() > 297) or (not conservative and r.nbits() > 255):
+                    continue
+                if gcd_small_primes(r) == None:
+                    continue
+                if r.is_pseudoprime() :
+                    bin_x = "2^63"
+                    for i in range(len(sign)):
+                        bin_x += " %s 2^%s" % ("+" if sign[i] == 0 else "-", item[i])
+                    w = len(item) + 1
+                    ad = twoadicity(r)
+                    p = bls_base(x, r)
+                    if p.is_pseudoprime():
+                        if extended:
+                            L.append([x, len(item) + 1, bin_x, ad])
+                        else:
+                            L.append([x, w, bin_x, ad])
+                        count += 1
+                    p = bls_base(-x, r)
+                    if p.is_pseudoprime():
+                        if extended:
+                            bin_x = "-(" + bin_x + ")"
+                            L.append([-x, len(item) + 1, bin_x, ad])
+                        else:
+                            L.append([-x, w, bin_x, ad])
+                        count += 1
+        output += "\tValid cases: %s (%s" % (count, round(1.0 * count / total, 4))
         output += " %)\n"
         if verbose:
             print(output)
@@ -61,6 +75,7 @@ def main():
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
     conservative = True if "--conservative" in args else False
+    extended = True if "--extended" in args else False
     sortadicity = True if "--sort_adicity" in args else False
     silent = True if "--silent" in args else False
     save = True if "--save" in args else False
@@ -75,6 +90,7 @@ Cmd: sage find_bls.sage [--sequential] [--conservative] [--sort_adicity] [--sile
 Args:
     --sequential        Uses only one process
     --conservative      Uses conservative sizes for BLS security
+    --extended          Uses pos/neg combinations of powers of 2 for the BLS generator
     --sort_adicity      Sorts results by decreasing 2-adicity rather than increasing Hamming weight
     --silent            Ignores stats at each search step
     --save              Saves list into csv file
@@ -86,7 +102,7 @@ Args:
 
     adicity = int(args[0])
     min_weight = int(args[1]) if len(args) > 1 else 2
-    max_weight = int(args[2]) if len(args) > 2 else 8
+    max_weight = int(args[2]) if len(args) > 2 else 6
 
     result_list = []
     async_result_list = []
@@ -95,13 +111,13 @@ Args:
         async_result_list.append(result)
 
     if processes == 1 or min_weight == max_weight:
-        result_list = find_BLS12_curve(adicity, min_weight, max_weight, conservative)
+        result_list = find_BLS12_curve(adicity, min_weight, max_weight, conservative, 0, 1, extended, not silent)
     else:
         print("Using %d processes." % (processes,))
         pool = Pool(processes=processes)
 
         for wid in range(processes):
-            pool.apply_async(worker, (adicity, min_weight, max_weight, conservative, wid, processes, not silent), callback=collect_result)
+            pool.apply_async(worker, (adicity, min_weight, max_weight, conservative, wid, processes, extended, not silent), callback=collect_result)
     
         pool.close()
         pool.join()
@@ -109,10 +125,16 @@ Args:
             result_list += i
 
     if len(result_list) > 1:
-        if sortadicity:
-            result_list.sort(key = lambda x: (x[2], -x[1])) # sorting by 2-adicity first
+        if extended:
+            if sortadicity:
+                result_list.sort(key = lambda x: (x[3], -x[1])) # sorting by 2-adicity first
+            else:
+                result_list.sort(key = lambda x: (-x[1], x[3])) # sorting by weight first
         else:
-            result_list.sort(key = lambda x: (-x[1], x[2])) # sorting by weight first
+            if sortadicity:
+                result_list.sort(key = lambda x: (x[2], -x[1])) # sorting by 2-adicity first
+            else:
+                result_list.sort(key = lambda x: (-x[1], x[2])) # sorting by weight first
         result_list.reverse()
 
     if save:
