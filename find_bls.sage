@@ -26,7 +26,11 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
         count = 0
         List_wx = list(combinations(range(adicity+1, limit-1), weight))
         if extended:
-            List_sign_wx = list(combinations_with_replacement(range(0, 2), weight))
+            Set_sign_wx_1 = set(combinations_with_replacement(range(0, 2), weight))
+            Set_sign_wx_2 = set(combinations_with_replacement(reversed(range(0, 2)), weight))
+            # Actually still a Set, maybe there's a better way to remove duplicates
+            List_sign_wx = Set_sign_wx_2 - Set_sign_wx_1
+            List_sign_wx = list(Set_sign_wx_1) + list(List_sign_wx)
         else:
             List_sign_wx = [[0 for i in range(weight)]]
         output = "Weight %s\n" % (weight+1)
@@ -141,9 +145,11 @@ Args:
         result_list.reverse()
 
     if save:
-        filename = "generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
+        filename = "bls_generators/generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
         if conservative:
             filename += "_conservative"
+        if extended:
+            filename += "_extended"
         filename += ".csv"
         f = open(filename, 'w')
         writer = csv.writer(f)
