@@ -19,12 +19,12 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
     if conservative:
         limit = 74 # Base field size < 448bits
     else:
-        limit = 64 # Base field size < 384bits
+        limit = 63 # Base field size < 384bits
     assert(adicity <= limit - weight_end)
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
-        List_wx = list(combinations(range(adicity+1, limit-2), weight))
+        List_wx = list(combinations(range(adicity+1, limit-1), weight))
         if extended:
             List_sign_wx = list(combinations_with_replacement(range(0, 2), weight))
         else:
@@ -33,22 +33,25 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
         total = len(List_wx) * len(List_sign_wx)
         output += "\tTotal cases: %s\n" % total
         for item in List_wx:
-            x = 1<<(limit-1) # to start already at desired size for r
             for sign in List_sign_wx:
+                x = 1<<(limit) # to start already at desired size for r
                 for i in range(len(sign)):
-                    x = x + (1<<item[i]) if sign[i] == 0 else x - (1<<item[i])
+                    if sign[i] == 0:
+                        x += 1<<item[i]
+                    else:
+                        x -= 1<<item[i]
                 r = bls_scalar(x)
                 if (conservative and r.nbits() > 297) or (not conservative and r.nbits() > 255):
                     continue
                 if gcd_small_primes(r) == None:
                     continue
                 if r.is_pseudoprime() :
-                    bin_x = "2^63"
-                    for i in range(len(sign)):
-                        bin_x += " %s 2^%s" % ("+" if sign[i] == 0 else "-", item[i])
                     w = len(item) + 1
                     ad = twoadicity(r)
                     p = bls_base(x, r)
+                    bin_x = "2^%s" % limit
+                    for i in reversed(range(0, len(sign))):
+                        bin_x += " %s 2^%s" % ("+" if sign[i] == 0 else "-", item[i])
                     if p.is_pseudoprime():
                         if extended:
                             L.append([x, len(item) + 1, bin_x, ad])
@@ -57,8 +60,8 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
                         count += 1
                     p = bls_base(-x, r)
                     if p.is_pseudoprime():
+                        bin_x = "-(" + bin_x + ")"
                         if extended:
-                            bin_x = "-(" + bin_x + ")"
                             L.append([-x, len(item) + 1, bin_x, ad])
                         else:
                             L.append([-x, w, bin_x, ad])
@@ -138,7 +141,10 @@ Args:
         result_list.reverse()
 
     if save:
-        filename = "generator_list_%d_%d_%d.csv" % (adicity, min_weight, max_weight)
+        filename = "generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
+        if conservative:
+            filename += "_conservative"
+        filename += ".csv"
         f = open(filename, 'w')
         writer = csv.writer(f)
         for res in result_list:

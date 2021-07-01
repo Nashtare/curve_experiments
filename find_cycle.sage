@@ -1,3 +1,7 @@
+# Based from Daira Hopwood's curvesearch repository
+# https://github.com/daira/curvesearch
+# and adapted for BLS curves
+
 import csv
 import sys
 from multiprocessing import cpu_count, Pool
@@ -10,43 +14,66 @@ if sys.version_info[0] == 2: range = xrange
 
 # Find cycle of curves for given prime
 # `a` coefficients can be set to 0 when using CM method
-def find_curves(p):
+def find_curves(p, q):
     Fp = GF(p)
     for p_coeff_b in COEFFICIENT_RANGE:
         if Fp(p_coeff_b).is_square():
             # if b is square, the order cannot be prime
             continue
         Ep = EllipticCurve(GF(p), [0, p_coeff_b])
-        q = Ep.count_points()
-        if not is_pseudoprime(q):
-            continue
+        if q == Ep.count_points():
+            sys.stdout.write("#")
+            sys.stdout.flush()
 
-        sys.stdout.write("#")
-        sys.stdout.flush()
+            Fq = GF(q)
+            for q_coeff_b in COEFFICIENT_RANGE:
+                if Fq(q_coeff_b).is_square():
+                    continue
+                Eq = EllipticCurve(GF(q), [0, q_coeff_b])
+                if Eq.count_points() == p:
+                    if Mod(p_coeff_b, p).multiplicative_order() != p-1:
+                        continue
+                    if Mod(q_coeff_b, q).multiplicative_order() != q-1:
+                        continue
 
-        Fq = GF(q)
-        for q_coeff_b in COEFFICIENT_RANGE:
-            if Fp(q_coeff_b).is_square():
-                continue
-            Eq = EllipticCurve(GF(p), [0, q_coeff_b])
-            if Eq.count_points() % p == 0:
-                yield (p, p_coeff_b, q, q_coeff_b)
+                    (rho_sec_p, k_p) = curve_security(p, q)
+                    (rho_sec_q, k_q) = curve_security(q, p)
+
+                    if rho_sec_p < RHO_SECURITY or rho_sec_q < RHO_SECURITY:
+                        continue
+
+                    (twist_sec_p, twist_k_p) = twist_security(p, q)
+                    (twist_sec_q, twist_k_q) = twist_security(q, p)
+
+                    #TODO: check if this twist security flaw is by design or we are just unlucky
+                    # if twist_sec_p < TWIST_SECURITY:
+                    #     continue
+
+                    if twist_sec_q < TWIST_SECURITY:
+                        continue
+
+                    yield (p, p_coeff_b, rho_sec_p, twist_sec_p, q, q_coeff_b, rho_sec_q, twist_sec_q)
 
 # Iterates over BLS generators to try finding cycle of curves including a BLS scalar
 def find_cycle(generator_list, wid = 0, processes = 1):
-    end = len(generator_list)
-    for index in range(0 + wid, end, processes):
-        sys.stdout.write(".")
+    for (x, x_form, p, q, V, T, q_form) in solve_CM(generator_list, wid, processes):
+        sys.stdout.write("o")
         sys.stdout.flush()
-        x = generator_list[index]
-        p = bls_scalar(x)
-        for (p, p_coeff_b, q, q_coeff_b) in find_curves(p):
-            output = "\n"
+        for (p, p_coeff_b, rho_sec_p, twist_sec_p, q, q_coeff_b, rho_sec_q, twist_sec_q) in find_curves(p, q):
+            output = "\n\n\n"
             output += "x = %s\n" % x
+            output += "x = %s\n" % x_form
             output += "p = %s\n" % p
+            output += "p = %s - (%d 2-adicity)\n" % ("0b" + p.binary(), twoadicity(p))
             output += "q = %s\n" % q
+            output += "q = %s - (%d 2-adicity)\n" % ("0b" + q.binary(), twoadicity(q))
+            output += "q = %s\n" % q_form
             output += "Ep/Fp : y^2 = x^3 + %d\n" % p_coeff_b
+            output += "Ep/Fp Pollard Rho security: %s\n" % rho_sec_p
+            output += "Ep/Fp Twist security: %s\n" % twist_sec_p
             output += "Eq/Fq : y^2 = x^3 + %d\n" % q_coeff_b
+            output += "Eq/Fq Pollard Rho security: %s\n" % rho_sec_q
+            output += "Eq/Fq Twist security: %s\n\n" % twist_sec_q
             print(output)
     return
 
@@ -54,26 +81,22 @@ def find_cycle(generator_list, wid = 0, processes = 1):
 # Unlikely to work as it is, should be reworked
 def solve_CM(generator_list, wid = 0, processes = 1):
     if len(generator_list) > 1:
+        V_var,T_var = var('V,T', domain=ZZ)
         for i in range(wid, len(generator_list), processes):
             sys.stdout.write('.')
             sys.stdout.flush()
-            x = generator_list[i]
+            x = generator_list[i][0]
             p = bls_scalar(x)
-            L = p.nbits()
-            adicity = twoadicity(p)
-            V_bit_size = (L-1)//2
-            Vbase = 1 << V_bit_size
-            trailing_zeros = adicity+1
-            p4 = 4*p
-            for w in range(0, V_bit_size-trailing_zeros):
-                for Vc in combinations(range(trailing_zeros, V_bit_size), w):
-                    V = Vbase + sum([1 << i for i in Vc]) + 1
-                    assert ((V-1)/2) % (1<<adicity) == 0
-                    T2 = p4 - 3*V**2
-                    if T2 > 0:
-                        T = sqrt(T2)
-                        if T in ZZ:
-                            print(p,T,V)
+            solutions = solve([4*p == 3*V_var^2 + T_var^2], V_var,T_var)
+            for (V,T) in solutions:
+                V = Integer(V)
+                T = Integer(T)
+                q = Integer(p + 1 - T)
+                if q != p and q.is_pseudoprime(): # q == p if T == 1
+                    yield(x, generator_list[i][1], p, q, V, T, "p+1-T")
+                q = Integer(p + 1 + (T - 3*V) / 2)
+                if q.is_pseudoprime():
+                    yield(x, generator_list[i][1], p, q, V, T, "p+1+(T-3V)/2")
     else:
         p = bls_scalar(generator_list[0])
         L = p.nbits()
@@ -95,6 +118,7 @@ def solve_CM(generator_list, wid = 0, processes = 1):
                     if T in ZZ:
                         print(p,T,V)
 
+
 def main():
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
@@ -105,12 +129,12 @@ def main():
 
     if (not jubjub and len(args) < 1) or help:
         print("""
-Cmd: sage find_cycle.sage [--jubjub] [--solve-cm] [--sequential]
+Cmd: sage find_cycle.sage [--jubjub] [--cm-method] [--sequential]
                           [<filename>]
 
 Args:
     --jubjub        Tries finding a cycle with jubjub
-    --solve-cm      Tries solving the CM equation
+    --cm-method     Tries solving the CM equation
     --sequential    Uses only one process
     <filename>      File listing BLS generators
 
@@ -131,7 +155,7 @@ equation with jubjub, or given as standalone for exhaustive search.
 
         for i in range(len(list_x)):
             tmp = list_x[i]
-            list_x[i] = Integer(int(tmp[0]))
+            list_x[i] = [Integer(int(tmp[0])), tmp[2]]
 
     if processes == 1:
         strategy(list_x)
