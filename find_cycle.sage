@@ -58,8 +58,8 @@ def find_curves(p, q):
                     yield (p, p_coeff_b, rho_sec_p, k_p, twist_sec_p, twist_k_p, q, q_coeff_b, rho_sec_q, k_q, twist_sec_q, twist_k_q)
 
 # Iterates over BLS generators to try finding cycle of curves including a BLS scalar
-def find_cycle(generator_list, wid = 0, processes = 1):
-    for (x, x_form, p, q, V, T, q_form) in solve_CM(generator_list, wid, processes):
+def find_cycle(generator_list, is_bls12, wid = 0, processes = 1):
+    for (x, x_form, p, q, V, T, q_form) in solve_CM(generator_list, is_bls12, wid, processes):
         sys.stdout.write("o")
         sys.stdout.flush()
         for (p, p_coeff_b, rho_sec_p, k_p, twist_sec_p, twist_k_p, q, q_coeff_b, rho_sec_q, k_q, twist_sec_q, twist_k_q) in find_curves(p, q):
@@ -84,14 +84,15 @@ def find_cycle(generator_list, wid = 0, processes = 1):
 
 # Tries solving CM method for BLS scalar fields of high 2-adicity
 # Unlikely to work as it is, should be reworked
-def solve_CM(generator_list, wid = 0, processes = 1):
+def solve_CM(generator_list, is_bls12 = True, wid = 0, processes = 1):
+    scalar_func = bls12_scalar if is_bls12 else bls24_scalar
     if len(generator_list) > 1:
         V_var,T_var = var('V,T', domain=ZZ)
         for i in range(wid, len(generator_list), processes):
             sys.stdout.write('.')
             sys.stdout.flush()
             x = generator_list[i][0]
-            p = bls_scalar(x)
+            p = scalar_func(x)
             solutions = solve([4*p == 3*V_var^2 + T_var^2], V_var,T_var)
             # To prevent duplicates with T1 == T2 and V1 == -V2 or reciprocally
             q_set = set()
@@ -110,9 +111,8 @@ def solve_CM(generator_list, wid = 0, processes = 1):
                 q_set.add(q)
                 if q.is_pseudoprime():
                     yield(x, generator_list[i][1], p, q, V, T, "p+1+(T-3V)/2")
-        return
     else:
-        p = bls_scalar(generator_list[0])
+        p = bls12_scalar(generator_list[0])
         L = p.nbits()
         assert(L <= 255)
         adicity = twoadicity(p)
@@ -131,7 +131,11 @@ def solve_CM(generator_list, wid = 0, processes = 1):
                     T = sqrt(T2)
                     if T in ZZ:
                         print(p,T,V)
-        return
+    #TODO: Handle end signal in main()
+    while True:
+        sys.stdout.write('x')
+        sys.stdout.flush()
+        sleep(30)
 
 
 def main():
@@ -162,6 +166,7 @@ Args:
         list_x = [-0xd201000000010000] # BLS generator yielding jubjub base field
     else:
         file_name = str(args[0])
+        is_bls12 = True if "bls12" in file_name else False
         with open(file_name, 'r') as f1:
             list_x = list(csv.reader(f1))
 
@@ -178,7 +183,7 @@ Args:
 
         try:
             for wid in range(processes):
-                pool.apply_async(worker, (strategy, list_x, wid, processes))
+                pool.apply_async(worker, (strategy, list_x, is_bls12, wid, processes))
 
             while True:
                 sleep(1000)
@@ -195,7 +200,7 @@ def worker(*args):
     except:
         print_exc()
 
-def real_worker(strategy, list_x, wid, processes):
-    return strategy(list_x, wid, processes)
+def real_worker(strategy, list_x, is_bls12, wid, processes):
+    return strategy(list_x, is_bls12, wid, processes)
 
 main()

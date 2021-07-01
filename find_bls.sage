@@ -44,7 +44,7 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
                         x += 1<<item[i]
                     else:
                         x -= 1<<item[i]
-                r = bls_scalar(x)
+                r = bls12_scalar(x)
                 if (conservative and r.nbits() > 297) or (not conservative and r.nbits() > 255):
                     continue
                 if gcd_small_primes(r) == None:
@@ -52,7 +52,7 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
                 if r.is_pseudoprime() :
                     w = len(item) + 1
                     ad = twoadicity(r)
-                    p = bls_base(x, r)
+                    p = bls12_base(x, r)
                     bin_x = "2^%s" % limit
                     for i in reversed(range(0, len(sign))):
                         bin_x += " %s 2^%s" % ("+" if sign[i] == 0 else "-", item[i])
@@ -62,7 +62,7 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
                         else:
                             L.append([x, w, bin_x, ad])
                         count += 1
-                    p = bls_base(-x, r)
+                    p = bls12_base(-x, r)
                     if p.is_pseudoprime():
                         bin_x = "-(" + bin_x + ")"
                         if extended:
@@ -76,11 +76,139 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
             print(output)
     return L
 
+# Outputs parameters of valid BLS24 curves of 2-adicity alpha (scalar field) and bounded Hamming weight (generator)
+# The output list stores triplets generator, weight and adicity and is sorted by default by Hamming weights.
+def find_BLS24_curve(adicity, weight_start = 2, weight_end = 8, _conservative = False, wid = 0, processes = 1, extended = False, verbose=True):
+    assert(weight_start > 0)
+    adicity = adicity // 4
+    L = []
+    limit = 31 # Scalar field size < 256bits
+    assert(adicity <= limit - weight_end)
+
+    for weight in range(weight_start-1 + wid, weight_end, processes):
+        count = 0
+        List_wx = list(combinations(range(adicity+1, limit-1), weight))
+        if extended:
+            Set_sign_wx_1 = set(combinations_with_replacement(range(0, 2), weight))
+            Set_sign_wx_2 = set(combinations_with_replacement(reversed(range(0, 2)), weight))
+            # Actually still a Set, maybe there's a better way to remove duplicates
+            List_sign_wx = Set_sign_wx_2 - Set_sign_wx_1
+            List_sign_wx = list(Set_sign_wx_1) + list(List_sign_wx)
+        else:
+            List_sign_wx = [[0 for i in range(weight)]]
+        output = "Weight %s\n" % (weight+1)
+        total = len(List_wx) * len(List_sign_wx)
+        output += "\tTotal cases: %s\n" % total
+        for item in List_wx:
+            for sign in List_sign_wx:
+                x = 1<<(limit) # to start already at desired size for r
+                for i in range(len(sign)):
+                    if sign[i] == 0:
+                        x += 1<<item[i]
+                    else:
+                        x -= 1<<item[i]
+                r = bls24_scalar(x)
+                if r.nbits() > 255:
+                    continue
+                if gcd_small_primes(r) == None:
+                    continue
+                if r.is_pseudoprime() :
+                    w = len(item) + 1
+                    ad = twoadicity(r)
+                    p = bls24_base(x, r)
+                    bin_x = "2^%s" % limit
+                    for i in reversed(range(0, len(sign))):
+                        bin_x += " %s 2^%s" % ("+" if sign[i] == 0 else "-", item[i])
+                    if p.is_pseudoprime():
+                        if extended:
+                            L.append([x, len(item) + 1, bin_x, ad])
+                        else:
+                            L.append([x, w, bin_x, ad])
+                        count += 1
+                    p = bls24_base(-x, r)
+                    if p.is_pseudoprime():
+                        bin_x = "-(" + bin_x + ")"
+                        if extended:
+                            L.append([-x, len(item) + 1, bin_x, ad])
+                        else:
+                            L.append([-x, w, bin_x, ad])
+                        count += 1
+        output += "\tValid cases: %s (%s" % (count, round(1.0 * count / total, 4))
+        output += " %)\n"
+        if verbose:
+            print(output)
+    return L
+
+# Outputs parameters of valid BLS48 curves of 2-adicity alpha (scalar field) and bounded Hamming weight (generator)
+# The output list stores triplets generator, weight and adicity and is sorted by default by Hamming weights.
+def find_BLS48_curve(adicity, weight_start = 2, weight_end = 8, _conservative = False, wid = 0, processes = 1, extended = False, verbose=True):
+    assert(weight_start > 0)
+    adicity = adicity // 8
+    L = []
+    limit = 31 # Scalar field size < 512bits
+    assert(adicity <= limit - weight_end)
+
+    for weight in range(weight_start-1 + wid, weight_end, processes):
+        count = 0
+        List_wx = list(combinations(range(adicity+1, limit-1), weight))
+        if extended:
+            Set_sign_wx_1 = set(combinations_with_replacement(range(0, 2), weight))
+            Set_sign_wx_2 = set(combinations_with_replacement(reversed(range(0, 2)), weight))
+            # Actually still a Set, maybe there's a better way to remove duplicates
+            List_sign_wx = Set_sign_wx_2 - Set_sign_wx_1
+            List_sign_wx = list(Set_sign_wx_1) + list(List_sign_wx)
+        else:
+            List_sign_wx = [[0 for i in range(weight)]]
+        output = "Weight %s\n" % (weight+1)
+        total = len(List_wx) * len(List_sign_wx)
+        output += "\tTotal cases: %s\n" % total
+        for item in List_wx:
+            for sign in List_sign_wx:
+                x = 1<<(limit) # to start already at desired size for r
+                for i in range(len(sign)):
+                    if sign[i] == 0:
+                        x += 1<<item[i]
+                    else:
+                        x -= 1<<item[i]
+                r = bls48_scalar(x)
+                if r.nbits() > 511:
+                    continue
+                if gcd_small_primes(r) == None:
+                    continue
+                if r.is_pseudoprime() :
+                    w = len(item) + 1
+                    ad = twoadicity(r)
+                    p = bls48_base(x, r)
+                    bin_x = "2^%s" % limit
+                    for i in reversed(range(0, len(sign))):
+                        bin_x += " %s 2^%s" % ("+" if sign[i] == 0 else "-", item[i])
+                    if p.is_pseudoprime():
+                        if extended:
+                            L.append([x, len(item) + 1, bin_x, ad])
+                        else:
+                            L.append([x, w, bin_x, ad])
+                        count += 1
+                    p = bls48_base(-x, r)
+                    if p.is_pseudoprime():
+                        bin_x = "-(" + bin_x + ")"
+                        if extended:
+                            L.append([-x, len(item) + 1, bin_x, ad])
+                        else:
+                            L.append([-x, w, bin_x, ad])
+                        count += 1
+        output += "\tValid cases: %s (%s" % (count, round(1.0 * count / total, 4))
+        output += " %)\n"
+        if verbose:
+            print(output)
+    return L
+
+
 ########################################################################
 
 def main():
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
+    strategy = find_BLS24_curve if "--bls24" in args else (find_BLS48_curve if "--bls48" in args else find_BLS12_curve)
     conservative = True if "--conservative" in args else False
     extended = True if "--extended" in args else False
     sortadicity = True if "--sort_adicity" in args else False
@@ -91,11 +219,13 @@ def main():
 
     if len(args) < 1 or help:
         print("""
-Cmd: sage find_bls.sage [--sequential] [--conservative] [--sort_adicity] [--silent] [--save]
+Cmd: sage find_bls.sage [--sequential] [--conservative] [--sort_adicity] [--silent] [--save] [--bls24] [--bls48]
                           <min-2adicity> [<min-weight> [<max-weight>]]
 
 Args:
     --sequential        Uses only one process
+    --bls24             Searches BLS24 curves instead of BLS12. Cannot be combined with conservative
+    --bls48             Searches BLS48 curves instead of BLS12. Cannot be combined with conservative
     --conservative      Uses conservative sizes for BLS security
     --extended          Uses pos/neg combinations of powers of 2 for the BLS generator
     --sort_adicity      Sorts results by decreasing 2-adicity rather than increasing Hamming weight
@@ -118,13 +248,14 @@ Args:
         async_result_list.append(result)
 
     if processes == 1 or min_weight == max_weight:
-        result_list = find_BLS12_curve(adicity, min_weight, max_weight, conservative, 0, 1, extended, not silent)
+        result_list = strategy(adicity, min_weight, max_weight, conservative, 0, 1, extended, not silent)
     else:
-        print("Using %d processes." % (processes,))
+        if not silent:
+            print("Using %d processes." % (processes,))
         pool = Pool(processes=processes)
 
         for wid in range(processes):
-            pool.apply_async(worker, (adicity, min_weight, max_weight, conservative, wid, processes, extended, not silent), callback=collect_result)
+            pool.apply_async(worker, (strategy, adicity, min_weight, max_weight, conservative, wid, processes, extended, not silent), callback=collect_result)
     
         pool.close()
         pool.join()
@@ -145,7 +276,12 @@ Args:
         result_list.reverse()
 
     if save:
-        filename = "bls_generators/generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
+        if strategy == find_BLS12_curve:
+            filename = "bls12_generators/generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
+        elif strategy == find_BLS24_curve:
+            filename = "bls24_generators/generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
+        else:
+            filename = "bls48_generators/generator_list_%d_%d_%d" % (adicity, min_weight, max_weight)
         if conservative:
             filename += "_conservative"
         if extended:
@@ -159,12 +295,13 @@ Args:
     else:
         for res in result_list:
             print(res)
-    print("Number of valid candidates: {}".format(len(result_list)))
+    if not silent:
+        print("Number of valid candidates: {}".format(len(result_list)))
 
-def worker(*args):
+def worker(strategy, *args):
     res = []
     try:
-        res = real_worker(*args)
+        res = real_worker(strategy, *args)
     except (KeyboardInterrupt, SystemExit):
         pass
     except:
@@ -172,7 +309,7 @@ def worker(*args):
     finally:
         return res
 
-def real_worker(*args):
-    return find_BLS12_curve(*args)
+def real_worker(strategy, *args):
+    return strategy(*args)
 
 main()

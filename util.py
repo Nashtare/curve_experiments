@@ -12,14 +12,46 @@ PI_12 = (pi/12).numerical_approx()
 def gcd_small_primes(p):
     return (r for r in SMALL_PRIMES if gcd(p-1, r) == 1)
 
-# Outputs a BLS scalar field prime order, given its generator
-def bls_scalar(x):
+# Outputs a BLS12 scalar field prime order, given its generator
+def bls12_scalar(x):
     return Integer(cyclotomic_value(12, x))
 
-# Outputs a BLS base field prime order, given its generator
-def bls_base(x, r = 0):
+# Outputs a BLS12 base field prime order, given its generator
+def bls12_base(x, r = 0):
     if r == 0:
         tmp = (x-1)**2 * cyclotomic_value(12, x) / 3 + x
+        if tmp.is_integer():
+            return Integer(tmp)
+    else:
+        tmp = (x-1)**2 * r / 3 + x
+        if tmp.is_integer():
+            return Integer(tmp)
+    return Integer(0)
+
+# Outputs a BLS24 scalar field prime order, given its generator
+def bls24_scalar(x):
+    return Integer(cyclotomic_value(24, x))
+
+# Outputs a BLS24 base field prime order, given its generator
+def bls24_base(x, r = 0):
+    if r == 0:
+        tmp = (x-1)**2 * cyclotomic_value(24, x) / 3 + x
+        if tmp.is_integer():
+            return Integer(tmp)
+    else:
+        tmp = (x-1)**2 * r / 3 + x
+        if tmp.is_integer():
+            return Integer(tmp)
+    return Integer(0)
+
+# Outputs a BLS48 scalar field prime order, given its generator
+def bls48_scalar(x):
+    return Integer(cyclotomic_value(48, x))
+
+# Outputs a BLS24 base field prime order, given its generator
+def bls48_base(x, r = 0):
+    if r == 0:
+        tmp = (x-1)**2 * cyclotomic_value(48, x) / 3 + x
         if tmp.is_integer():
             return Integer(tmp)
     else:
