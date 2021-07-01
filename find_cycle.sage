@@ -123,23 +123,20 @@ def main():
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
     jubjub = True if "--jubjub" in args else False
-    strategy = solve_CM if "--cm-method" in args else find_cycle
+    strategy = find_cycle
     help = True if "--help" in args else False
     args = [arg for arg in args if not arg.startswith("--")]
 
     if (not jubjub and len(args) < 1) or help:
         print("""
-Cmd: sage find_cycle.sage [--jubjub] [--cm-method] [--sequential]
+Cmd: sage find_cycle.sage [--jubjub] [--sequential]
                           [<filename>]
 
 Args:
     --jubjub        Tries finding a cycle with jubjub
-    --cm-method     Tries solving the CM equation
     --sequential    Uses only one process
     <filename>      File listing BLS generators
 
---jubjub can be combined with --solve-cm to try solving the CM
-equation with jubjub, or given as standalone for exhaustive search.
 """)
         return
 
