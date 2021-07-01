@@ -2,9 +2,10 @@ from sage.all import *
 
 SMALL_PRIMES = (3, 5, 7, 11, 13, 17)
 # Starts at 2 as y^2 = x^3 + 1 cannot have prime order
-COEFFICIENT_RANGE = range(2, 30)
+COEFFICIENT_RANGE = range(2, 20)
 RHO_SECURITY = 125
 TWIST_SECURITY = 100
+MIN_EMBEDDING_DEGREE = 200
 # For Pollard-Rho security analysis
 PI_12 = (pi/12).numerical_approx()
 
@@ -56,7 +57,7 @@ def embedding_degree(p, r):
                 break
             d /= v
 
-    return d
+    return Integer(d)
 
 def twist_security(p, q):
     return curve_security(p, 2*(p+1) - q)

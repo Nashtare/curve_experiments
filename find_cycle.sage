@@ -39,6 +39,9 @@ def find_curves(p, q):
                     (rho_sec_p, k_p) = curve_security(p, q)
                     (rho_sec_q, k_q) = curve_security(q, p)
 
+                    if k_p.nbits() < MIN_EMBEDDING_DEGREE or k_q.nbits() < MIN_EMBEDDING_DEGREE:
+                        continue
+
                     if rho_sec_p < RHO_SECURITY or rho_sec_q < RHO_SECURITY:
                         continue
 
@@ -52,28 +55,30 @@ def find_curves(p, q):
                     if twist_sec_q < TWIST_SECURITY:
                         continue
 
-                    yield (p, p_coeff_b, rho_sec_p, twist_sec_p, q, q_coeff_b, rho_sec_q, twist_sec_q)
+                    yield (p, p_coeff_b, rho_sec_p, k_p, twist_sec_p, twist_k_p, q, q_coeff_b, rho_sec_q, k_q, twist_sec_q, twist_k_q)
 
 # Iterates over BLS generators to try finding cycle of curves including a BLS scalar
 def find_cycle(generator_list, wid = 0, processes = 1):
     for (x, x_form, p, q, V, T, q_form) in solve_CM(generator_list, wid, processes):
         sys.stdout.write("o")
         sys.stdout.flush()
-        for (p, p_coeff_b, rho_sec_p, twist_sec_p, q, q_coeff_b, rho_sec_q, twist_sec_q) in find_curves(p, q):
+        for (p, p_coeff_b, rho_sec_p, k_p, twist_sec_p, twist_k_p, q, q_coeff_b, rho_sec_q, k_q, twist_sec_q, twist_k_q) in find_curves(p, q):
             output = "\n\n\n"
             output += "x = %s\n" % x
             output += "x = %s\n" % x_form
-            output += "p = %s\n" % p
+            output += "p = %s - (%d bits)\n" % (p, p.nbits())
             output += "p = %s - (%d 2-adicity)\n" % ("0b" + p.binary(), twoadicity(p))
-            output += "q = %s\n" % q
+            output += "q = %s - (%d bits)\n" % (q, q.nbits())
             output += "q = %s - (%d 2-adicity)\n" % ("0b" + q.binary(), twoadicity(q))
             output += "q = %s\n" % q_form
             output += "Ep/Fp : y^2 = x^3 + %d\n" % p_coeff_b
+            output += "Embedding degree of Ep/Fp:  %s ( > 2^%d)\n" % (k_p, k_p.nbits() - 1)
             output += "Ep/Fp Pollard Rho security: %s\n" % rho_sec_p
-            output += "Ep/Fp Twist security: %s\n" % twist_sec_p
+            output += "Ep/Fp Twist security:       %s\n" % twist_sec_p
             output += "Eq/Fq : y^2 = x^3 + %d\n" % q_coeff_b
+            output += "Embedding degree of Eq/Fq:  %s ( > 2^%d)\n" % (k_q, k_q.nbits() - 1)
             output += "Eq/Fq Pollard Rho security: %s\n" % rho_sec_q
-            output += "Eq/Fq Twist security: %s\n\n" % twist_sec_q
+            output += "Eq/Fq Twist security:       %s\n\n" % twist_sec_q
             print(output)
     return
 
@@ -88,15 +93,24 @@ def solve_CM(generator_list, wid = 0, processes = 1):
             x = generator_list[i][0]
             p = bls_scalar(x)
             solutions = solve([4*p == 3*V_var^2 + T_var^2], V_var,T_var)
+            # To prevent duplicates with T1 == T2 and V1 == -V2 or reciprocally
+            q_set = set()
             for (V,T) in solutions:
                 V = Integer(V)
                 T = Integer(T)
                 q = Integer(p + 1 - T)
+                if q in q_set:
+                    continue
+                q_set.add(q)
                 if q != p and q.is_pseudoprime(): # q == p if T == 1
                     yield(x, generator_list[i][1], p, q, V, T, "p+1-T")
-                q = Integer(p + 1 + (T - 3*V) / 2)
+                q = Integer(p + 1 + (T - 3*V) // 2)
+                if q in q_set:
+                    continue
+                q_set.add(q)
                 if q.is_pseudoprime():
                     yield(x, generator_list[i][1], p, q, V, T, "p+1+(T-3V)/2")
+        return
     else:
         p = bls_scalar(generator_list[0])
         L = p.nbits()
@@ -117,6 +131,7 @@ def solve_CM(generator_list, wid = 0, processes = 1):
                     T = sqrt(T2)
                     if T in ZZ:
                         print(p,T,V)
+        return
 
 
 def main():
