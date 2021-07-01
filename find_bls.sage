@@ -139,9 +139,9 @@ Args:
                 result_list.sort(key = lambda x: (-x[1], x[3])) # sorting by weight first
         else:
             if sortadicity:
-                result_list.sort(key = lambda x: (x[2], -x[1])) # sorting by 2-adicity first
+                result_list.sort(key = lambda x: (x[3], -x[1])) # sorting by 2-adicity first
             else:
-                result_list.sort(key = lambda x: (-x[1], x[2])) # sorting by weight first
+                result_list.sort(key = lambda x: (-x[1], x[3])) # sorting by weight first
         result_list.reverse()
 
     if save:

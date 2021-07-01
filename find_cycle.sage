@@ -172,7 +172,8 @@ Args:
     if processes == 1:
         strategy(list_x)
     else:
-        print("Using %d processes." % (processes,))
+        print("Using %d processes." % processes)
+        print("Generators list size: %d" % len(list_x))
         pool = Pool(processes=processes)
 
         try:
