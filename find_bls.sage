@@ -24,7 +24,7 @@ def find_BLS12_curve(adicity, weight_start = 2, weight_end = 8, conservative = F
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
-        List_wx = list(combinations(range(adicity+1, limit-1), weight))
+        List_wx = list(combinations(range(adicity, limit), weight))
         if extended:
             Set_sign_wx_1 = set(combinations_with_replacement(range(0, 2), weight))
             Set_sign_wx_2 = set(combinations_with_replacement(reversed(range(0, 2)), weight))
@@ -87,7 +87,7 @@ def find_BLS24_curve(adicity, weight_start = 2, weight_end = 8, _conservative = 
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
-        List_wx = list(combinations(range(adicity+1, limit-1), weight))
+        List_wx = list(combinations(range(adicity, limit), weight))
         if extended:
             Set_sign_wx_1 = set(combinations_with_replacement(range(0, 2), weight))
             Set_sign_wx_2 = set(combinations_with_replacement(reversed(range(0, 2)), weight))
@@ -150,7 +150,7 @@ def find_BLS48_curve(adicity, weight_start = 2, weight_end = 8, _conservative = 
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
-        List_wx = list(combinations(range(adicity+1, limit-1), weight))
+        List_wx = list(combinations(range(adicity, limit), weight))
         if extended:
             Set_sign_wx_1 = set(combinations_with_replacement(range(0, 2), weight))
             Set_sign_wx_2 = set(combinations_with_replacement(reversed(range(0, 2)), weight))
