@@ -93,3 +93,48 @@ def embedding_degree(p, r):
 
 def twist_security(p, q):
     return curve_security(p, 2*(p+1) - q)
+
+
+####################################################
+# FIELD UTILITY FUNCTIONS
+####################################################
+
+# Outputs low-endian representation of a 256-bit integer as an array of 4 64-bit words
+def repr_field_element(n, nb_hex = 64, output_hex = true):
+    assert(nb_hex % 16 == 0)
+    n = str(hex(Integer(n)))
+    while len(n) < nb_hex:
+        n = "0" + n
+    L = range(nb_hex//16)
+    L.reverse()
+    res = []
+    for i in L:
+        if output_hex:
+            res.append("0x" + n[i*16:i*16+16])
+        else:
+            res.append(Integer("0x" + n[i*16:i*16+16]))
+    return res
+
+def pretty_element_repr(n, nb_hex = 64, output_hex = true):
+    L = repr_field_element(n)
+    res = "\n[\n"
+    for i in L:
+        res += "    %s,\n" % i
+    res += "]"
+    return res
+
+# Outputs low-endian byte representation of a 256-bit integer
+def repr_field_element_bytes(n, nb_bytes = 32, output_hex = false):
+    assert(nb_bytes % 16 == 0)
+    n = str(hex(Integer(n)))
+    while len(n) < nb_bytes * 2:
+        n = "0" + n
+    L = range(nb_bytes)
+    L.reverse()
+    res = []
+    for i in L:
+        if output_hex:
+            res.append("0x" + n[i*2:i*2+2])
+        else:
+            res.append(Integer("0x" + n[i*2:i*2+2]))
+    return res
