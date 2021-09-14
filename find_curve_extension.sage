@@ -49,7 +49,7 @@ def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 4, max_cofacto
     extension.<a> = GF(prime^extension_degree, modulus="primitive")
     for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(extension, max_cofactor, wid, processes):
         output = "\n\n\n"
-        output += "E(%s) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension.order().factor(), coeff_a, coeff_b, index)
+        output += "E(GF(%s)) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension.order().factor(), coeff_a, coeff_b, index)
         output += "E generator point: %s\n" % g
         output += "E prime order: %s (%s bits)\n" % (order, order.nbits())
         output += "E cofactor: %s\n" % cofactor
