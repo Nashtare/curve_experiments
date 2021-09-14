@@ -71,10 +71,10 @@ def threeadicity(x, base=0, limit=128):
 def h_weight(x):
     return x.binary().count('1')
 
-def curve_security(p, q):
+def curve_security(p, q, main_factor = 0):
     sys.stdout.write('!')
     sys.stdout.flush()
-    r = factor(q)[-1][0]
+    r = main_factor if main_factor != 0 else factor(q)[-1][0]
     return (log(PI_12 * r, 4), embedding_degree(p, r))
 
 def embedding_degree(p, r):

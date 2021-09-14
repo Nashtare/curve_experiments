@@ -20,8 +20,6 @@ def find_curve(extension, max_cofactor, wid = 0, processes = 1):
 
         n = E.count_points()
         prime_order = n.factor()[-1][0]
-        if prime_order.nbits() < 220:
-            continue
         cofactor = n // prime_order
         if cofactor > max_cofactor:
             continue
@@ -32,28 +30,31 @@ def find_curve(extension, max_cofactor, wid = 0, processes = 1):
         while g.order() != prime_order:
             g = E.random_element()
             
-        # (rho_sec, k) = curve_security(p, q)
+        (rho_sec, k) = curve_security(extension.base().cardinality(), n, prime_order)
 
-        # if k.nbits() < MIN_EMBEDDING_DEGREE:
-        #     continue
-        # sys.stdout.write("X")
-        # sys.stdout.flush()
+        if k.nbits() < MIN_EMBEDDING_DEGREE:
+            continue
 
-        # if rho_sec < RHO_SECURITY:
-        #     continue
+        sys.stdout.write("+")
+        sys.stdout.flush()
 
-        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b)
+        if rho_sec < RHO_SECURITY - 5:
+            continue
+
+        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k)
 
 
 # Outputs parameters of valid curves over an extension of F62
 def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 4, max_cofactor = 256, wid = 0, processes = 1):
     extension.<a> = GF(prime^extension_degree, modulus="primitive")
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b) in find_curve(extension, max_cofactor, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(extension, max_cofactor, wid, processes):
         output = "\n\n\n"
         output += "E(%s) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension.order().factor(), coeff_a, coeff_b, index)
         output += "E generator point: %s\n" % g
         output += "E prime order: %s (%s bits)\n" % (order, order.nbits())
         output += "E cofactor: %s\n" % cofactor
+        output += "E security (Pollard-Rho): %s\n" % rho_security
+        output += "E embedding degree: %s\n" % embedding_degree
         print(output)
     return
 
@@ -73,6 +74,9 @@ Cmd: sage find_curve_extension.sage [--sequential] <prime> <extension_degree> <m
 
 Args:
     --sequential        Uses only one process
+    <prime>             A prime number, default 2^62 - 111 * 2^39 + 1
+    <extension_degree>  The extension degree of the prime field, default 4
+    <max_cofactor>      Maximum cofactor of the curve, default 256
 """)
         return
 
