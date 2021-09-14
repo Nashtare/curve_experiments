@@ -1,15 +1,13 @@
-import csv
 import sys
 from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from math import ceil
-from itertools import combinations, combinations_with_replacement
 
 from util import *
 
 if sys.version_info[0] == 2: range = xrange
 
-def find_curve(extension, wid = 0, processes = 1):
+def find_curve(extension, max_cofactor, wid = 0, processes = 1):
     a = extension.primitive_element()
     for i in range(wid + 1, 1000000000, processes):
         sys.stdout.write(".")
@@ -25,6 +23,8 @@ def find_curve(extension, wid = 0, processes = 1):
         if prime_order.nbits() < 220:
             continue
         cofactor = n // prime_order
+        if cofactor > max_cofactor:
+            continue
 
         sys.stdout.write("o")
         sys.stdout.flush()
@@ -46,11 +46,11 @@ def find_curve(extension, wid = 0, processes = 1):
 
 
 # Outputs parameters of valid curves over an extension of F62
-def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 4, wid = 0, processes = 1):
+def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 4, max_cofactor = 256, wid = 0, processes = 1):
     extension.<a> = GF(prime^extension_degree, modulus="primitive")
-    for (extension, E, g, order, index, cofactor, coeff_a, coeff_b) in find_curve(extension, wid, processes):
+    for (extension, E, g, order, index, cofactor, coeff_a, coeff_b) in find_curve(extension, max_cofactor, wid, processes):
         output = "\n\n\n"
-        output += "E(%s) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension, coeff_a, coeff_b, index)
+        output += "E(%s) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension.order().factor(), coeff_a, coeff_b, index)
         output += "E generator point: %s\n" % g
         output += "E prime order: %s (%s bits)\n" % (order, order.nbits())
         output += "E cofactor: %s\n" % cofactor
@@ -69,7 +69,7 @@ def main():
 
     if help:
         print("""
-Cmd: sage find_curve_extension.sage [--sequential] <prime> <extension_degree>
+Cmd: sage find_curve_extension.sage [--sequential] <prime> <extension_degree> <max_cofactor>
 
 Args:
     --sequential        Uses only one process
@@ -78,15 +78,17 @@ Args:
 
     prime = int(args[0]) if len(args) > 0 else 2^62 - 111 * 2^39 + 1
     extension_degree = int(args[1]) if len(args) > 1 else 4
+    max_cofactor = int(args[2]) if len(args) > 2 else 256
+
     if processes == 1:
-        strategy(prime, extension_degree)
+        strategy(prime, extension_degree, max_cofactor)
     else:
         print("Using %d processes." % processes)
         pool = Pool(processes=processes)
 
         try:
             for wid in range(processes):
-                pool.apply_async(worker, (strategy, prime, extension_degree, wid, processes))
+                pool.apply_async(worker, (strategy, prime, extension_degree, max_cofactor, wid, processes))
 
             while True:
                 sleep(1000)
