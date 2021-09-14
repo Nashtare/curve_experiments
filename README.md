@@ -20,6 +20,20 @@ sage find_cycle.sage bls_generators/generator_list_32_1_5_conservative.csv
 
 ---
 
+To print all the constants needed to define a PrimeField in Arkworks ecosystem:
+```bash
+sage field_params.sage 3618502788666131213697322783095070105623107215331596699973092056135872020481
+```
+
+---
+
+To find an elliptic curve on a field extension GF(2^61 - 1)^4 with cofactor <= 1 (i.e. prime order):
+```bash
+sage find_curve_extension.sage 2305843009213693951 4 1
+```
+
+---
+
 To generate BLS parameters for all three-sizes of embedding degrees, with different parameter considerations:
 ```bash
 ./gen_bls.sh
