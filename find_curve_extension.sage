@@ -24,6 +24,7 @@ def find_curve(extension, wid = 0, processes = 1):
         prime_order = n.factor()[-1][0]
         if prime_order.nbits() < 220:
             continue
+        cofactor = n // prime_order
 
         sys.stdout.write("o")
         sys.stdout.flush()
@@ -41,18 +42,18 @@ def find_curve(extension, wid = 0, processes = 1):
         # if rho_sec < RHO_SECURITY:
         #     continue
 
-        yield (extension, E, g, prime_order, i, coeff_a, coeff_b)
+        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b)
 
 
 # Outputs parameters of valid curves over an extension of F62
 def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 4, wid = 0, processes = 1):
     extension.<a> = GF(prime^extension_degree, modulus="primitive")
-    for (extension, E, g, order, index, coeff_a, coeff_b) in find_curve(extension, wid, processes):
+    for (extension, E, g, order, index, cofactor, coeff_a, coeff_b) in find_curve(extension, wid, processes):
         output = "\n\n\n"
         output += "E(%s) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension, coeff_a, coeff_b, index)
         output += "E generator point: %s\n" % g
-        output += "E prime order: %s\n" % order
-        output += "E prime order: %s bits\n" % order.nbits()
+        output += "E prime order: %s (%s bits)\n" % (order, order.nbits())
+        output += "E cofactor: %s\n" % cofactor
         print(output)
     return
 
