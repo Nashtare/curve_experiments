@@ -11,17 +11,18 @@ if sys.version_info[0] == 2: range = xrange
 
 def find_curve(extension, wid = 0, processes = 1):
     a = extension.primitive_element()
-    for i in range(wid + 1, 10000, processes):
+    for i in range(wid + 1, 1000000000, processes):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        coeff = a**i
+        coeff_a = 1
+        coeff_b = a**i
 
-        E = EllipticCurve(extension, [1, coeff])
+        E = EllipticCurve(extension, [coeff_a, coeff_b])
 
         n = E.count_points()
         prime_order = n.factor()[-1][0]
-        if prime_order.nbits() < 150:
+        if prime_order.nbits() < 220:
             continue
 
         sys.stdout.write("o")
@@ -40,20 +41,21 @@ def find_curve(extension, wid = 0, processes = 1):
         # if rho_sec < RHO_SECURITY:
         #     continue
 
-        return (extension, E, g, n)
+        yield (extension, E, g, prime_order, i, coeff_a, coeff_b)
 
 
 # Outputs parameters of valid curves over an extension of F62
 def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 4, wid = 0, processes = 1):
     extension.<a> = GF(prime^extension_degree, modulus="primitive")
-    for (extension, E, g, order) in find_curve(extension, wid, processes):
+    for (extension, E, g, order, index, coeff_a, coeff_b) in find_curve(extension, wid, processes):
         output = "\n\n\n"
-        output += "E(%s) : y^2 = x^3 + x + %d\n" % (extension, E.a6())
+        output += "E(%s) : y^2 = x^3 + %s * x + %s (b == a^%s)\n" % (extension, coeff_a, coeff_b, index)
         output += "E generator point: %s\n" % g
         output += "E prime order: %s\n" % order
         output += "E prime order: %s bits\n" % order.nbits()
         print(output)
     return
+
 
 ########################################################################
 
