@@ -1,8 +1,7 @@
 import sys
 from multiprocessing import cpu_count, Pool
 from traceback import print_exc
-from math import ceil
-from sage.categories.finite_fields import FiniteFields
+from itertools import combinations_with_replacement
 
 from util import *
 
@@ -30,6 +29,8 @@ def make_finite_field(k):
     k0 = k.base_field()
     G = k.modulus()
     assert G.parent().base_ring() is k0
+    # Won't work with higher tower extensions but previous version
+    # failing with Sage 9.4, investigate how to solve it
     k0_new = k.base_field()
     phi0 = k0.hom(k0.gen(), k0)
     G_new = G.map_coefficients(phi0, k0_new)
@@ -92,19 +93,27 @@ def find_curve(extension, max_cofactor, wid = 0, processes = 1):
 
 
 # Outputs parameters of valid curves over an extension of a small field
-def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 6, max_cofactor = 256, wid = 0, processes = 1):
-    # extension.<a> = GF(prime^extension_degree, modulus="primitive")
-
+def print_curve(prime, extension_degree, max_cofactor, wid = 0, processes = 1):
     Fp = GF(prime)
     K.<x> = Fp[]
-    Fp2.<u> = Fp.extension(x^2-3)
-    Fp6.<v> = Fp2.extension(x^3 - 4*x - 1)
-    extension, phi, phi_inv = make_finite_field(Fp6)
+    factors = list(extension_degree.factor())
+    for n in range(len(factors)):
+        degree = factors[n][0]
+        for i in range(factors[n][1]): # multiplicity
+            poly = find_low_poly(K, degree)
+            if poly == []:
+                poly = find_low_poly(K, degree, use_root=True)
+                if poly == []:
+                    raise ValueError('Could not find an irreducible polynomial with specified parameters.')
+            Fp = Fp.extension(poly, "u_{0}".format(n))
+            K.<x> = Fp[]
+
+    extension, phi, phi_inv = make_finite_field(Fp)
 
     for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(extension, max_cofactor, wid, processes):
         output = "\n\n\n"
         output += "E(GF((%s)^%s)) : y^2 = x^3 + x + %s (b == a^%s)\n" % (extension.base_ring().order().factor(), extension.degree(), coeff_b, index)
-        output += "E(GF((%s)^%s)) : y^2 = x^3 + x + %s\n" % (Fp6.base_ring().order().factor(), Fp6.degree(), phi_inv(coeff_b))
+        output += "E(GF((%s)^%s)) : y^2 = x^3 + x + %s\n" % (Fp.base_ring().order().factor(), Fp.degree(), phi_inv(coeff_b))
         output += "E generator point: %s\n" % g
         output += "E prime order: %s (%s bits)\n" % (order, order.nbits())
         output += "E cofactor: %s\n" % cofactor
@@ -113,6 +122,42 @@ def print_curve(prime = 2^62 - 111 * 2^39 + 1, extension_degree = 6, max_cofacto
         print(output)
     return
 
+def find_low_poly(ring, degree, use_root = False, max_coeff = 5, output_all = False):
+    x = ring.gen()
+    
+    set_coeffs_1 = set(combinations_with_replacement(range(-max_coeff, max_coeff), degree))
+    set_coeffs_2 = set(combinations_with_replacement(reversed(range(-max_coeff, max_coeff)), degree))
+    set_coeffs = set_coeffs_1.union(set_coeffs_2)
+
+    list_poly = []
+    for coeffs in set_coeffs:
+        p = x^degree
+        for n in range(len(coeffs)):
+            p += coeffs[n]*x^n
+        if p.is_irreducible():
+            list_poly.append(p)
+    
+    if use_root:
+        root = ring.base().gen()
+        for regular_coeffs in set_coeffs:
+            p = x^degree
+            for n in range(len(regular_coeffs)):
+                p += regular_coeffs[n]*x^n
+            for special_coeffs in set_coeffs:
+                q = p
+                for n in range(len(special_coeffs)):
+                    q += root * special_coeffs[n]*x^n
+                if q.is_irreducible():
+                    list_poly.append(q)
+                    # Exhaustive search usually becomes too heavy with this,
+                    # hence stop as soon as one solution is found
+                    if not output_all:
+                        return min(list_poly, key = lambda t: len(t.coefficients()))
+
+    if output_all or list_poly == []:
+        return list_poly
+    else:
+        return min(list_poly, key = lambda t: len(t.coefficients()))
 
 ########################################################################
 
@@ -130,14 +175,14 @@ Cmd: sage find_curve_extension.sage [--sequential] <prime> <extension_degree> <m
 Args:
     --sequential        Uses only one process
     <prime>             A prime number, default 2^62 - 111 * 2^39 + 1
-    <extension_degree>  The extension degree of the prime field, default 4
-    <max_cofactor>      Maximum cofactor of the curve, default 256
+    <extension_degree>  The extension degree of the prime field, default 6
+    <max_cofactor>      Maximum cofactor of the curve, default 64
 """)
         return
 
     prime = int(args[0]) if len(args) > 0 else 2^62 - 111 * 2^39 + 1
-    extension_degree = int(args[1]) if len(args) > 1 else 4
-    max_cofactor = int(args[2]) if len(args) > 2 else 256
+    extension_degree = int(args[1]) if len(args) > 1 else 6
+    max_cofactor = int(args[2]) if len(args) > 2 else 64
 
     if processes == 1:
         strategy(prime, extension_degree, max_cofactor)
