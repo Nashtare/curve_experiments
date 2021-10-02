@@ -1,6 +1,9 @@
-# Based from Daira Hopwood's curvesearch repository
-# https://github.com/daira/curvesearch
-# and adapted for BLS curves
+"""
+This module aims at finding cycle of curves.
+Based from Daira Hopwood's curvesearch repository
+https://github.com/daira/curvesearch
+and adapted for BLS curves
+"""
 
 import csv
 import sys
@@ -103,30 +106,23 @@ def find_cycle(generator_list, is_bls12, wid=0, processes=1):
         sys.stdout.flush()
         for (p, p_coeff_b, rho_sec_p, k_p, twist_sec_p, twist_k_p, q, q_coeff_b, rho_sec_q, k_q, twist_sec_q, twist_k_q) in find_curves(p, q):
             output = "\n\n\n"
-            output += "x = %s\n" % x
-            output += "x = %s\n" % x_form
-            output += "p = %s - (%d bits)\n" % (p, p.nbits())
-            output += "p = %s - (%d 2-adicity)\n" % ("0b" +
-                                                     p.binary(), twoadicity(p))
-            output += "q = %s - (%d bits)\n" % (q, q.nbits())
-            output += "q = %s - (%d 2-adicity)\n" % ("0b" +
-                                                     q.binary(), twoadicity(q))
-            output += "q = %s\n" % q_form
-            output += "Ep/Fp : y^2 = x^3 + %d\n" % p_coeff_b
-            output += "Embedding degree of Ep/Fp:  %s ( > 2^%d)\n" % (
-                k_p, k_p.nbits() - 1)
-            output += "Ep/Fp Pollard Rho security: %s\n" % rho_sec_p
-            output += "Ep/Fp Twist security:       %s\n" % twist_sec_p
-            output += "Eq/Fq : y^2 = x^3 + %d\n" % q_coeff_b
-            output += "Embedding degree of Eq/Fq:  %s ( > 2^%d)\n" % (
-                k_q, k_q.nbits() - 1)
-            output += "Eq/Fq Pollard Rho security: %s\n" % rho_sec_q
-            output += "Eq/Fq Twist security:       %s\n\n" % twist_sec_q
+            output += f"x = {x}\n"
+            output += f"x = {x_form}\n"
+            output += f"p = {p} - ({p.n_bits()} bits)\n"
+            output += f"p = 0b{p.binary()} - ({twoadicity(p)} 2-adicity)\n"
+            output += f"q = {q} - ({q.nbits()} bits)\n"
+            output += f"q = {q.binary()} - ({twoadicity(q)} 2-adicity)\n"
+            output += f"q = {q_form}\n"
+            output += f"Ep/Fp : y^2 = x^3 + {p_coeff_b}\n"
+            output += f"Embedding degree of Ep/Fp:  {k_p} ( > 2^{k_p.nbits() - 1})\n"
+            output += f"Ep/Fp Pollard Rho security: {rho_sec_p}\n"
+            output += f"Ep/Fp Twist security:       {twist_sec_p}\n"
+            output += f"Eq/Fq : y^2 = x^3 + {q_coeff_b}\n"
+            output += f"Embedding degree of Eq/Fq:  {k_q} ( > 2^{k_q.nbits() - 1})\n"
+            output += f"Eq/Fq Pollard Rho security: {rho_sec_q}\n"
+            output += f"Eq/Fq Twist security:       {twist_sec_q}\n\n"
             print(output)
     return
-
-# Tries solving CM method for BLS scalar fields of high 2-adicity
-# Unlikely to work as it is, should be reworked
 
 
 def solve_CM(generator_list, is_bls12=True, wid=0, processes=1):
@@ -171,10 +167,10 @@ def solve_CM(generator_list, is_bls12=True, wid=0, processes=1):
                     yield(x, generator_list[i][1], p, q, V, T, "p+1+(T-3V)/2")
     else:
         p = bls12_scalar(generator_list[0])
-        L = p.nbits()
-        assert(L <= 255)
+        p_len = p.nbits()
+        assert p_len <= 255
         adicity = twoadicity(p)
-        V_bit_size = (L-1)//2
+        V_bit_size = (p_len-1)//2
         Vbase = 1 << V_bit_size
         trailing_zeros = adicity+1
         p4 = 4*p
@@ -199,11 +195,12 @@ def solve_CM(generator_list, is_bls12=True, wid=0, processes=1):
 ########################################################################
 
 def main():
+    """Main function"""
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
-    jubjub = True if "--jubjub" in args else False
+    jubjub = "--jubjub" in args
     strategy = find_cycle
-    help = True if "--help" in args else False
+    help = "--help" in args
     args = [arg for arg in args if not arg.startswith("--")]
 
     if (not jubjub and len(args) < 1) or help:
@@ -227,7 +224,7 @@ Args:
         list_x = [-0xd201000000010000]
     else:
         file_name = str(args[0])
-        is_bls12 = True if "bls12" in file_name else False
+        is_bls12 = "bls12" in file_name
         with open(file_name, 'r') as f1:
             list_x = list(csv.reader(f1))
 
@@ -238,8 +235,8 @@ Args:
     if processes == 1:
         strategy(list_x)
     else:
-        print("Using %d processes." % processes)
-        print("Generators list size: %d" % len(list_x))
+        print(f"Using {processes} processes.")
+        print(f"Generators list size: {len(list_x)}")
         pool = Pool(processes=processes)
 
         try:

@@ -1,3 +1,7 @@
+"""
+This module aims at providing utility functions for other modules.
+"""
+
 from sage.all import *
 
 SMALL_PRIMES = (3, 5, 7, 11, 13, 17)
@@ -112,15 +116,15 @@ def twist_security(p, q):
 # FIELD UTILITY FUNCTIONS
 ####################################################
 
-def repr_field_element(n, nb_hex=64, output_hex=true):
-    assert(nb_hex % 16 == 0)
+def repr_field_element(n, nb_hex=64, output_hex=True):
+    assert nb_hex % 16 == 0
     n = str(hex(Integer(n)))
     while len(n) < nb_hex:
         n = "0" + n
-    L = range(nb_hex//16)
-    L.reverse()
+    num_list = range(nb_hex//16)
+    num_list.reverse()
     res = []
-    for i in L:
+    for i in num_list:
         if output_hex:
             res.append("0x" + n[i*16:i*16+16])
         else:
@@ -128,24 +132,24 @@ def repr_field_element(n, nb_hex=64, output_hex=true):
     return res
 
 
-def pretty_element_repr(n, nb_hex=64, output_hex=true):
-    L = repr_field_element(n)
+def pretty_element_repr(n, nb_hex=64, output_hex=True):
+    num_list = repr_field_element(n)
     res = "\n[\n"
-    for i in L:
+    for i in num_list:
         res += "    %s,\n" % i
     res += "]"
     return res
 
 
-def repr_field_element_bytes(n, nb_bytes=32, output_hex=false):
-    assert(nb_bytes % 16 == 0)
+def repr_field_element_bytes(n, nb_bytes=32, output_hex=False):
+    assert nb_bytes % 16 == 0
     n = str(hex(Integer(n)))
     while len(n) < nb_bytes * 2:
         n = "0" + n
-    L = range(nb_bytes)
-    L.reverse()
+    num_list = range(nb_bytes)
+    num_list.reverse()
     res = []
-    for i in L:
+    for i in num_list:
         if output_hex:
             res.append("0x" + n[i*2:i*2+2])
         else:

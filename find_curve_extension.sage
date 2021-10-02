@@ -1,16 +1,20 @@
+"""
+This module aims at finding curves defined over finite field extensions.
+"""
+
 import sys
 from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import *
+from util import curve_security, MIN_EMBEDDING_DEGREE, RHO_SECURITY
 
 if sys.version_info[0] == 2:
     range = xrange
 
 
 def make_finite_field(k):
-    """ Return the finite field isomorphic to this field.
+    r""" Return the finite field isomorphic to this field.
 
     INPUT:
 
@@ -59,7 +63,7 @@ def make_finite_field(k):
 
 
 def find_curve(extension, max_cofactor, wid=0, processes=1):
-    """Yield curve constructed over a prime field extension.
+    r"""Yield curve constructed over a prime field extension.
 
     INPUT:
 
@@ -121,7 +125,7 @@ def find_curve(extension, max_cofactor, wid=0, processes=1):
 
 
 def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
-    """Print parameters of curves defined over a prime field extension
+    r"""Print parameters of curves defined over a prime field extension
 
     INPUT:
 
@@ -145,7 +149,7 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
                 if poly_list == []:
                     raise ValueError(
                         'Could not find an irreducible polynomial with specified parameters.')
-            poly = poly_list[]  # extract the polynomial from the list
+            poly = poly_list[0]  # extract the polynomial from the list
             Fp = Fp.extension(poly, "u_{0}{1}".format(n, i))
             Fpx = Fp['x']
 
@@ -153,22 +157,20 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
 
     for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(extension, max_cofactor, wid, processes):
         output = "\n\n\n"
-        output += "E(GF((%s)^%s)) : y^2 = x^3 + x + %s (b == a^%s)\n" % (
-            extension.base_ring().order().factor(), extension.degree(), coeff_b, index)
-        output += "E(GF((%s)^%s)) : y^2 = x^3 + x + %s\n" % (
-            Fp.base_ring().order().factor(), Fp.degree(), phi_inv(coeff_b))
-        output += "E generator point: %s\n" % g
-        output += "E prime order: %s (%s bits)\n" % (order, order.nbits())
-        output += "E cofactor: %s\n" % cofactor
-        output += "E security (Pollard-Rho): %s\n" % rho_security
-        output += "E embedding degree: %s (>2^%s) \n" % (
-            embedding_degree, embedding_degree.nbits()-1)
+        output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + x + {coeff_b} (b == a^{index})\n"
+        output += f"\t\twith a = {extension.primitive_element()}\n"
+        output += f"E(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {phi_inv(coeff_b)}\n"
+        output += f"E generator point: {g}\n" % g
+        output += f"E prime order: {order} ({order.nbits()} bits)\n"
+        output += f"E cofactor: {cofactor}\n"
+        output += f"E security (Pollard-Rho): {rho_security}\n"
+        output += f"E embedding degree: {embedding_degree} (>2^{embedding_degree.nbits()-1}) \n"
         print(output)
     return
 
 
 def find_irreducible_poly(ring, degree, use_root=False, max_coeff=5, output_all=False):
-    """Return a list of irreducible polynomials with small and few coefficients.
+    r"""Return a list of irreducible polynomials with small and few coefficients.
 
     INPUT:
 
@@ -228,10 +230,11 @@ def find_irreducible_poly(ring, degree, use_root=False, max_coeff=5, output_all=
 ########################################################################
 
 def main():
+    """Main function"""
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
     strategy = print_curve
-    help = True if "--help" in args else False
+    help = "--help" in args
     args = [arg for arg in args if not arg.startswith("--")]
 
     if help:
@@ -253,7 +256,7 @@ Args:
     if processes == 1:
         strategy(prime, extension_degree, max_cofactor)
     else:
-        print("Using %d processes." % processes)
+        print(f"Using {processes} processes.")
         pool = Pool(processes=processes)
 
         try:

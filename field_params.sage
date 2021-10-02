@@ -1,3 +1,9 @@
+"""
+This module aims at providing finite field parameters for Arkworks algebra/ff library.
+"""
+
+import sys
+
 from util import twoadicity, pretty_element_repr
 
 
@@ -17,38 +23,35 @@ def params(p):
     """
 
     F = GF(p)
-    output = "\n\n\nParameters for GF(%d) arithmetic construction:\n" % p
-    output += "\n\nTWO_ADICITY: %d" % twoadicity(p)
+    output = f"\n\n\nParameters for GF({p}) arithmetic construction:\n"
+    output += f"\n\nTWO_ADICITY: {twoadicity(p)}"
     r = F(2**256)
-    r2 = F(2**512)
+    r_squared = F(2**512)
     s = 2 ^ twoadicity(p)
     t = (p-1) / s
     g = F.multiplicative_generator()
     root_unity = g ^ t
-    output += "\n\nTWO_ADIC ROOT UNITY: %s" % pretty_element_repr(
-        root_unity * r)
-    output += "\n\nMODULUS: %s" % pretty_element_repr(p)
-    output += "\n\nR: %s" % pretty_element_repr(r)
-    output += "\n\nR^2: %s" % pretty_element_repr(r2)
-    output += "\n\nMODULUS_MINUS_ONE_DIV_TWO (unformatted): %s" % pretty_element_repr(
-        (p-1)/2)
-    output += "\n\nT (unformatted): %s" % repr(t)
-    output += "\n\nT_MINUS_ONE_DIV_TWO (unformatted): %s" % pretty_element_repr(
-        (t-1)/2)
-    output += "\n\nGENERATOR: %s" % pretty_element_repr(g * r)
-    output += "\n\nMODULUS_BITS: %d" % p.nbits()
-    output += "\n\nCAPACITY: %s" % str(p.nbits() - 1)
-    output += "\n\nREPR SHAVE BITS: %s" % str(256 - p.nbits())
-    output += "\n\nINV: %d" % (-(p ^ (-1)) % 2 ^ 64)
+    output += f"\n\nTWO_ADIC ROOT UNITY: {pretty_element_repr(root_unity * r)}"
+    output += f"\n\nMODULUS: {pretty_element_repr(p)}"
+    output += f"\n\nR: {pretty_element_repr(r)}"
+    output += f"\n\nR^2: {pretty_element_repr(r_squared)}"
+    output += f"\n\nMODULUS_MINUS_ONE_DIV_TWO (unformatted): {pretty_element_repr((p-1)/2)}"
+    output += f"\n\nT (unformatted): {repr(t)}"
+    output += f"\n\nT_MINUS_ONE_DIV_TWO (unformatted): {pretty_element_repr((t-1)/2)}"
+    output += f"\n\nGENERATOR: {pretty_element_repr(g * r)}"
+    output += f"\n\nMODULUS_BITS: {p.nbits()}"
+    output += f"\n\nCAPACITY: {p.nbits() - 1}"
+    output += f"\n\nREPR SHAVE BITS: {256 - p.nbits()}"
+    output += f"\n\nINV: {(-(p ^ (-1)) % 2 ^ 64)}"
     print(output)
-    return
 
 
 ########################################################################
 
 def main():
+    """Main function"""
     args = sys.argv[1:]
-    help = True if "--help" in args else False
+    help = "--help" in args
 
     if len(args) < 1 or help:
         print("""
