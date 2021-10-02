@@ -33,33 +33,34 @@ def make_finite_field(k):
 
     assert k.is_field()
     assert k.is_finite()
-    k0 = k.base_field()
-    G = k.modulus()
-    assert G.parent().base_ring() is k0
-    # Won't work with higher tower extensions but previous version
-    # failing with Sage 9.4, investigate how to solve it
-    k0_new = k.base_field()
-    phi0 = k0.hom(k0.gen(), k0)
-    G_new = G.map_coefficients(phi0, k0_new)
-    k_new = k0_new.extension(G_new.degree())
+    # TODO: partially solved sage9.4 issue but still failing for higher extensions (wrong isomorphic field)
+    if k.base_ring().is_prime_field():
+        return k, k.hom(k.gen(), k), k.hom(k.gen(), k)
+    else:
+        k0 = k.base_field()
+        G = k.modulus()
+        assert G.parent().base_ring() is k0
+        k0_new, phi0, _ = make_finite_field(k0)
+        G_new = G.map_coefficients(phi0, k0_new)
+        k_new = k0_new.extension(G_new.degree())
 
-    alpha = G_new.roots(k_new)[0][0]
-    Pk0 = k.cover_ring()
-    Pk0_new = k0_new[Pk0.variable_name()]
-    psi1 = Pk0.hom(phi0, Pk0_new)
-    psi2 = Pk0_new.hom(alpha, k_new)
-    psi = psi1.post_compose(psi2)
-    # psi: Pk0 --> k_new
-    phi = k.hom(Pk0.gen(), Pk0, check=False)
-    phi = phi.post_compose(psi)
+        alpha = G_new.roots(k_new)[0][0]
+        Pk0 = k.cover_ring()
+        Pk0_new = k0_new[Pk0.variable_name()]
+        psi1 = Pk0.hom(phi0, Pk0_new)
+        psi2 = Pk0_new.hom(alpha, k_new)
+        psi = psi1.post_compose(psi2)
+        # psi: Pk0 --> k_new
+        phi = k.hom(Pk0.gen(), Pk0, check=False)
+        phi = phi.post_compose(psi)
 
-    k_inv = k0.base_ring()
-    phi0_inv = k_inv.hom(k_inv.gen(), k_inv)
-    G_new_inv = k_new.modulus().map_coefficients(phi0_inv, k0_new)
-    alpha_inv = G_new_inv.roots(k)[0][0]
-    phi_inv = k_new.hom(alpha_inv, k)
+        k_inv = k0.base_ring()
+        phi0_inv = k_inv.hom(k_inv.gen(), k_inv)
+        G_new_inv = k_new.modulus().map_coefficients(phi0_inv, k0_new)
+        alpha_inv = G_new_inv.roots(k)[0][0]
+        phi_inv = k_new.hom(alpha_inv, k)
 
-    return k_new, phi, phi_inv
+        return k_new, phi, phi_inv
 
 
 def find_curve(extension, max_cofactor, wid=0, processes=1):
