@@ -227,8 +227,7 @@ def find_BLS48_curve(adicity, weight_start=2, weight_end=8, _conservative=False,
             signed_wx_set_2 = set(combinations_with_replacement(
                 reversed(range(0, 2)), weight))
             # Actually still a Set, maybe there's a better way to remove duplicates
-            signed_wx_list = signed_wx_set_2 - signed_wx_set_1
-            signed_wx_list = list(signed_wx_set_1) + list(signed_wx_list)
+            signed_wx_list = list(signed_wx_set_1.union(signed_wx_set_2))
         else:
             signed_wx_list = [[0 for i in range(weight)]]
         output = f"Weight {weight+1}\n"
@@ -314,8 +313,8 @@ Args:
         return
 
     adicity = int(args[0])
-    min_weight = int(args[1]) if len(args) > 1 else 2
-    max_weight = int(args[2]) if len(args) > 2 else 6
+    min_weight = max(int(args[1]), 2) if len(args) > 1 else 2
+    max_weight = max(int(args[2]), min_weight) if len(args) > 2 else 6
 
     result_list = []
     async_result_list = []
