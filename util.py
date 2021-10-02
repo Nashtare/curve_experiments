@@ -9,15 +9,20 @@ MIN_EMBEDDING_DEGREE = 200
 # For Pollard-Rho security analysis
 PI_12 = (pi/12).numerical_approx()
 
+
 def gcd_small_primes(p):
     return (r for r in SMALL_PRIMES if gcd(p-1, r) == 1)
 
-# Outputs a BLS12 scalar field prime order, given its generator
+
+####################################################
+# BLS UTILITY FUNCTIONS
+####################################################
+
 def bls12_scalar(x):
     return Integer(cyclotomic_value(12, x))
 
-# Outputs a BLS12 base field prime order, given its generator
-def bls12_base(x, r = 0):
+
+def bls12_base(x, r=0):
     if r == 0:
         tmp = (x-1)**2 * cyclotomic_value(12, x) / 3 + x
         if tmp.is_integer():
@@ -28,12 +33,12 @@ def bls12_base(x, r = 0):
             return Integer(tmp)
     return Integer(0)
 
-# Outputs a BLS24 scalar field prime order, given its generator
+
 def bls24_scalar(x):
     return Integer(cyclotomic_value(24, x))
 
-# Outputs a BLS24 base field prime order, given its generator
-def bls24_base(x, r = 0):
+
+def bls24_base(x, r=0):
     if r == 0:
         tmp = (x-1)**2 * cyclotomic_value(24, x) / 3 + x
         if tmp.is_integer():
@@ -44,12 +49,12 @@ def bls24_base(x, r = 0):
             return Integer(tmp)
     return Integer(0)
 
-# Outputs a BLS48 scalar field prime order, given its generator
+
 def bls48_scalar(x):
     return Integer(cyclotomic_value(48, x))
 
-# Outputs a BLS24 base field prime order, given its generator
-def bls48_base(x, r = 0):
+
+def bls48_base(x, r=0):
     if r == 0:
         tmp = (x-1)**2 * cyclotomic_value(48, x) / 3 + x
         if tmp.is_integer():
@@ -60,22 +65,29 @@ def bls48_base(x, r = 0):
             return Integer(tmp)
     return Integer(0)
 
-# Outputs 2-adicity of a number
+
 def twoadicity(x, base=0, limit=256):
-    return max(i for i in range(base, limit) if ((x-1) % (1<<i) == 0))
-# Outputs 3-adicity of a number
+    return max(i for i in range(base, limit) if ((x-1) % (1 << i) == 0))
+
+
 def threeadicity(x, base=0, limit=128):
     return max(i for i in range(base, limit) if ((x-1) % (3**i) == 0))
 
-# Outputs Hamming weight of a number
+
 def h_weight(x):
     return x.binary().count('1')
 
-def curve_security(p, q, main_factor = 0):
+
+####################################################
+# CURVE SECURITY FUNCTIONS
+####################################################
+
+def curve_security(p, q, main_factor=0):
     sys.stdout.write('!')
     sys.stdout.flush()
     r = main_factor if main_factor != 0 else factor(q)[-1][0]
     return (log(PI_12 * r, 4), embedding_degree(p, r))
+
 
 def embedding_degree(p, r):
     assert gcd(p, r) == 1
@@ -91,6 +103,7 @@ def embedding_degree(p, r):
 
     return Integer(d)
 
+
 def twist_security(p, q):
     return curve_security(p, 2*(p+1) - q)
 
@@ -99,8 +112,7 @@ def twist_security(p, q):
 # FIELD UTILITY FUNCTIONS
 ####################################################
 
-# Outputs low-endian representation of a 256-bit integer as an array of 4 64-bit words
-def repr_field_element(n, nb_hex = 64, output_hex = true):
+def repr_field_element(n, nb_hex=64, output_hex=true):
     assert(nb_hex % 16 == 0)
     n = str(hex(Integer(n)))
     while len(n) < nb_hex:
@@ -115,7 +127,8 @@ def repr_field_element(n, nb_hex = 64, output_hex = true):
             res.append(Integer("0x" + n[i*16:i*16+16]))
     return res
 
-def pretty_element_repr(n, nb_hex = 64, output_hex = true):
+
+def pretty_element_repr(n, nb_hex=64, output_hex=true):
     L = repr_field_element(n)
     res = "\n[\n"
     for i in L:
@@ -123,8 +136,8 @@ def pretty_element_repr(n, nb_hex = 64, output_hex = true):
     res += "]"
     return res
 
-# Outputs low-endian byte representation of a 256-bit integer
-def repr_field_element_bytes(n, nb_bytes = 32, output_hex = false):
+
+def repr_field_element_bytes(n, nb_bytes=32, output_hex=false):
     assert(nb_bytes % 16 == 0)
     n = str(hex(Integer(n)))
     while len(n) < nb_bytes * 2:

@@ -10,11 +10,37 @@ from itertools import combinations
 
 from util import *
 
-if sys.version_info[0] == 2: range = xrange
+if sys.version_info[0] == 2:
+    range = xrange
 
-# Find cycle of curves for given prime
-# `a` coefficients can be set to 0 when using CM method
+
 def find_curves(p, q):
+    """Yield parameters defining a cycle of curves between two prime fields Fp and Fq
+
+    INPUT:
+
+    - ``p`` -- a prime number, modulus of Fp
+    - ``q`` -- a prime number, modulus of Fq
+
+    OUTPUT:
+
+    - ``p`` -- a prime number, modulus of Fp
+    - ``b_p`` -- the b coefficient of the curve defined over Fp in short Weierstrass form
+    - ``rho_sec_p`` -- the Pollard-Rho security of the curve defined over Fp
+    - ``k_p`` -- the embedding degree of the curve defined over Fp
+    - ``twist_sec_p`` -- the Twist security of the curve defined over Fp
+    - ``twist_k_p`` -- the embedding degree of the twist of the curve defined over Fp
+    - ``q`` -- a prime number, modulus of Fq
+    - ``b_q`` -- the b coefficient of the curve defined over Fq in short Weierstrass form
+    - ``rho_sec_q`` -- the Pollard-Rho security of the curve defined over Fq
+    - ``k_q`` -- the embedding degree of the curve defined over Fq
+    - ``twist_sec_q`` -- the Twist security of the curve defined over Fq
+    - ``twist_k_q`` -- the embedding degree of the twist of the curve defined over Fq
+
+    All found curves have equations in short Weierstrass form E: y^2 = x^3 + b (i.e. a coefficient is zero).
+
+    """
+
     Fp = GF(p)
     for p_coeff_b in COEFFICIENT_RANGE:
         if Fp(p_coeff_b).is_square():
@@ -48,7 +74,7 @@ def find_curves(p, q):
                     (twist_sec_p, twist_k_p) = twist_security(p, q)
                     (twist_sec_q, twist_k_q) = twist_security(q, p)
 
-                    #TODO: check if this twist security flaw is by design or we are just unlucky
+                    # TODO: check if this twist security flaw is by design or we are just unlucky
                     # if twist_sec_p < TWIST_SECURITY:
                     #     continue
 
@@ -57,8 +83,21 @@ def find_curves(p, q):
 
                     yield (p, p_coeff_b, rho_sec_p, k_p, twist_sec_p, twist_k_p, q, q_coeff_b, rho_sec_q, k_q, twist_sec_q, twist_k_q)
 
-# Iterates over BLS generators to try finding cycle of curves including a BLS scalar
-def find_cycle(generator_list, is_bls12, wid = 0, processes = 1):
+
+def find_cycle(generator_list, is_bls12, wid=0, processes=1):
+    """Iterate over BLS generators to print cycles of curves including a BLS scalar field
+
+    INPUT:
+
+    - ``generator_list`` -- list of BLS generators `x` defining a scalar and a base fields
+    - ``is_bls12`` -- boolean indicating whether we are using generators for BLS12 or BLS24 curves
+    - ``wid`` -- current job id (default 0)
+    - ``processes`` -- number of concurrent jobs (default 1)
+
+    BLS48 curves are currently not supported.
+
+    """
+
     for (x, x_form, p, q, V, T, q_form) in solve_CM(generator_list, is_bls12, wid, processes):
         sys.stdout.write("o")
         sys.stdout.flush()
@@ -67,16 +106,20 @@ def find_cycle(generator_list, is_bls12, wid = 0, processes = 1):
             output += "x = %s\n" % x
             output += "x = %s\n" % x_form
             output += "p = %s - (%d bits)\n" % (p, p.nbits())
-            output += "p = %s - (%d 2-adicity)\n" % ("0b" + p.binary(), twoadicity(p))
+            output += "p = %s - (%d 2-adicity)\n" % ("0b" +
+                                                     p.binary(), twoadicity(p))
             output += "q = %s - (%d bits)\n" % (q, q.nbits())
-            output += "q = %s - (%d 2-adicity)\n" % ("0b" + q.binary(), twoadicity(q))
+            output += "q = %s - (%d 2-adicity)\n" % ("0b" +
+                                                     q.binary(), twoadicity(q))
             output += "q = %s\n" % q_form
             output += "Ep/Fp : y^2 = x^3 + %d\n" % p_coeff_b
-            output += "Embedding degree of Ep/Fp:  %s ( > 2^%d)\n" % (k_p, k_p.nbits() - 1)
+            output += "Embedding degree of Ep/Fp:  %s ( > 2^%d)\n" % (
+                k_p, k_p.nbits() - 1)
             output += "Ep/Fp Pollard Rho security: %s\n" % rho_sec_p
             output += "Ep/Fp Twist security:       %s\n" % twist_sec_p
             output += "Eq/Fq : y^2 = x^3 + %d\n" % q_coeff_b
-            output += "Embedding degree of Eq/Fq:  %s ( > 2^%d)\n" % (k_q, k_q.nbits() - 1)
+            output += "Embedding degree of Eq/Fq:  %s ( > 2^%d)\n" % (
+                k_q, k_q.nbits() - 1)
             output += "Eq/Fq Pollard Rho security: %s\n" % rho_sec_q
             output += "Eq/Fq Twist security:       %s\n\n" % twist_sec_q
             print(output)
@@ -84,26 +127,41 @@ def find_cycle(generator_list, is_bls12, wid = 0, processes = 1):
 
 # Tries solving CM method for BLS scalar fields of high 2-adicity
 # Unlikely to work as it is, should be reworked
-def solve_CM(generator_list, is_bls12 = True, wid = 0, processes = 1):
+
+
+def solve_CM(generator_list, is_bls12=True, wid=0, processes=1):
+    """Iterate over BLS generators and solve the complex multiplication equation
+
+    INPUT:
+
+    - ``generator_list`` -- list of BLS generators `x` defining a scalar and a base fields
+    - ``is_bls12`` -- boolean indicating whether we are using generators for BLS12 or BLS24 curves
+    - ``wid`` -- current job id (default 0)
+    - ``processes`` -- number of concurrent jobs (default 1)
+
+    BLS48 curves are currently not supported.
+
+    """
+
     scalar_func = bls12_scalar if is_bls12 else bls24_scalar
     if len(generator_list) > 1:
-        V_var,T_var = var('V,T', domain=ZZ)
+        V_var, T_var = var('V,T', domain=ZZ)
         for i in range(wid, len(generator_list), processes):
             sys.stdout.write('.')
             sys.stdout.flush()
             x = generator_list[i][0]
             p = scalar_func(x)
-            solutions = solve([4*p == 3*V_var^2 + T_var^2], V_var,T_var)
+            solutions = solve([4*p == 3*V_var ^ 2 + T_var ^ 2], V_var, T_var)
             # To prevent duplicates with T1 == T2 and V1 == -V2 or reciprocally
             q_set = set()
-            for (V,T) in solutions:
+            for (V, T) in solutions:
                 V = Integer(V)
                 T = Integer(T)
                 q = Integer(p + 1 - T)
                 if q in q_set:
                     continue
                 q_set.add(q)
-                if q != p and q.is_pseudoprime(): # q == p if T == 1
+                if q != p and q.is_pseudoprime():  # q == p if T == 1
                     yield(x, generator_list[i][1], p, q, V, T, "p+1-T")
                 q = Integer(p + 1 + (T - 3*V) // 2)
                 if q in q_set:
@@ -125,18 +183,20 @@ def solve_CM(generator_list, is_bls12 = True, wid = 0, processes = 1):
             sys.stdout.flush()
             for Vc in combinations(range(trailing_zeros, V_bit_size), w):
                 V = Vbase + sum([1 << i for i in Vc]) + 1
-                assert ((V-1)/2) % (1<<adicity) == 0
+                assert ((V-1)/2) % (1 << adicity) == 0
                 T2 = p4 - 3*V**2
                 if T2 > 0:
                     T = sqrt(T2)
                     if T in ZZ:
-                        print(p,T,V)
-    #TODO: Handle end signal in main()
+                        print(p, T, V)
+    # TODO: Handle end signal in main()
     while True:
         sys.stdout.write('x')
         sys.stdout.flush()
         sleep(30)
 
+
+########################################################################
 
 def main():
     args = sys.argv[1:]
@@ -163,7 +223,8 @@ Args:
         print("Invalid arguments. Type `sage find_cycle.sage --help` for help")
 
     if jubjub:
-        list_x = [-0xd201000000010000] # BLS generator yielding jubjub base field
+        # BLS generator yielding Jubjub base field
+        list_x = [-0xd201000000010000]
     else:
         file_name = str(args[0])
         is_bls12 = True if "bls12" in file_name else False
@@ -183,7 +244,8 @@ Args:
 
         try:
             for wid in range(processes):
-                pool.apply_async(worker, (strategy, list_x, is_bls12, wid, processes))
+                pool.apply_async(
+                    worker, (strategy, list_x, is_bls12, wid, processes))
 
             while True:
                 sleep(1000)
@@ -191,6 +253,7 @@ Args:
             pass
         finally:
             pool.terminate()
+
 
 def worker(*args):
     try:
@@ -200,7 +263,9 @@ def worker(*args):
     except:
         print_exc()
 
+
 def real_worker(strategy, list_x, is_bls12, wid, processes):
     return strategy(list_x, is_bls12, wid, processes)
+
 
 main()
