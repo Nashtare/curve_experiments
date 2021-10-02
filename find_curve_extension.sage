@@ -140,7 +140,7 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
 
     Fp = GF(prime)
     Fpx = Fp['x']
-    factors = list(extension_degree.factor())
+    factors = list(Integer(extension_degree).factor())
     for n in range(len(factors)):
         degree = factors[n][0]
         for i in range(factors[n][1]):  # multiplicity
@@ -151,7 +151,7 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
                     raise ValueError(
                         'Could not find an irreducible polynomial with specified parameters.')
             poly = poly_list[0]  # extract the polynomial from the list
-            Fp = Fp.extension(poly, "u_{0}{1}".format(n, i))
+            Fp = Fp.extension(poly, f"u_{0}{1}".format(n, i))
             Fpx = Fp['x']
 
     extension, phi, phi_inv = make_finite_field(Fp)
