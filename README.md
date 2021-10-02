@@ -4,11 +4,12 @@ Experimental repo to play with elliptic curves
 
 ## Usage
 
-To generate BLS parameters with given 2-adicity for the scalar field:
+To generate BLS parameters with 2-adicity of 35 for the scalar field and bounded
+Hamming weight 1 <= w <= 7 for the generator:
 ```bash
 sage find_bls.sage 35 1 7 --save --extended --conservative
 ```
-Results are saved by default in the `bls12_generators/` folder if `--save` is specified.
+Results are saved by default in the `blsN_generators/` folder if `--save` is specified.
 
 ---
 
@@ -20,7 +21,7 @@ sage find_cycle.sage bls_generators/generator_list_32_1_5_conservative.csv
 
 ---
 
-To print all the constants needed to define a PrimeField in Arkworks ecosystem:
+To print all the constants needed to define a PrimeField of given modulus in the Arkworks ecosystem:
 ```bash
 sage field_params.sage 3618502788666131213697322783095070105623107215331596699973092056135872020481
 ```
