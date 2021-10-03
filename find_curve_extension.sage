@@ -139,8 +139,11 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
     """
 
     Fp = GF(prime)
+    if wid == 0:
+        print(Fp)
     Fpx = Fp['x']
     factors = list(Integer(extension_degree).factor())
+    count = 1
     for n in range(len(factors)):
         degree = factors[n][0]
         for i in range(factors[n][1]):  # multiplicity
@@ -152,6 +155,9 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
                         'Could not find an irreducible polynomial with specified parameters.')
             poly = poly_list[0]  # extract the polynomial from the list
             Fp = Fp.extension(poly, f"u_{0}{1}".format(n, i))
+            if wid == 0:
+                print(f"Modulus {count}: {poly}")
+                count += 1
             Fpx = Fp['x']
 
     extension, phi, phi_inv = make_finite_field(Fp)
@@ -170,7 +176,7 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
     return
 
 
-def find_irreducible_poly(ring, degree, use_root=False, max_coeff=5, output_all=False):
+def find_irreducible_poly(ring, degree, use_root=False, max_coeff=2, output_all=False):
     r"""Return a list of irreducible polynomials with small and few coefficients.
 
     INPUT:
