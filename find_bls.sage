@@ -14,7 +14,15 @@ if sys.version_info[0] == 2:
     range = xrange
 
 
-def find_BLS12_curve(adicity, weight_start=2, weight_end=8, conservative=False, wid=0, processes=1, extended=False, verbose=True):
+def find_BLS12_curve(
+        adicity,
+        weight_start=2,
+        weight_end=8,
+        conservative=False,
+        wid=0,
+        processes=1,
+        extended=False,
+        verbose=True):
     """Return parameters of valid BLS12 curves
 
     INPUT:
@@ -22,10 +30,12 @@ def find_BLS12_curve(adicity, weight_start=2, weight_end=8, conservative=False, 
     - ``adicity`` -- minimum 2-adicity of the scalar field
     - ``weight_start`` -- minimum Hamming weight for generator `x` (default 2)
     - ``weight_end`` -- maximum Hamming weight for generator `x` (default 8)
-    - ``conservative`` -- boolean indicating whether selecting conservative parameters or not (default False)
+    - ``conservative`` -- boolean indicating whether selecting
+                          conservative parameters or not (default False)
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
-    - ``extended`` -- boolean indicating whether to use negative powers of two in addition to the binary one (default False)
+    - ``extended`` -- boolean indicating whether to use negative powers
+                      of two in addition to the binary one (default False)
     - ``verbose`` -- boolean for more verbose outputs (default True)
 
     OUTPUT: a list of tuples `(x, w, repr, a)` where `x` is the generator of the BLS fields,
@@ -54,58 +64,29 @@ def find_BLS12_curve(adicity, weight_start=2, weight_end=8, conservative=False, 
                 combinations_with_replacement(range(0, 2), weight))
             signed_wx_set_2 = set(combinations_with_replacement(
                 reversed(range(0, 2)), weight))
-            # Actually still a Set, maybe there's a better way to remove duplicates
-            signed_wx_list = signed_wx_set_2 - signed_wx_set_1
-            signed_wx_list = list(signed_wx_set_1) + list(signed_wx_list)
+            signed_wx_list = list(signed_wx_set_1.union(signed_wx_set_2))
         else:
             signed_wx_list = [[0 for i in range(weight)]]
         output = f"Weight {weight+1}\n"
         total = len(wx_list) * len(signed_wx_list)
         output += f"\tTotal cases: {total}\n"
-        for item in wx_list:
-            for sign in signed_wx_list:
-                x = 1 << (limit)  # to start already at desired size for r
-                for i in range(len(sign)):
-                    if sign[i] == 0:
-                        x += 1 << item[i]
-                    else:
-                        x -= 1 << item[i]
-                r = bls12_scalar(x)
-                if (conservative and r.nbits() > 297) or (not conservative and r.nbits() > 255):
-                    continue
-                if gcd_small_primes(r) is None:
-                    continue
-                if r.is_pseudoprime():
-                    w = len(item) + 1
-                    adicity = twoadicity(r)
-                    p = bls12_base(x, r)
-                    bin_x = "2^%s" % limit
-                    for i in reversed(range(0, len(sign))):
-                        bin_x += " %s 2^%s" % ("+" if sign[i]
-                                               == 0 else "-", item[i])
-                    if p.is_pseudoprime():
-                        if extended:
-                            output_list.append(
-                                [x, len(item) + 1, bin_x, adicity])
-                        else:
-                            output_list.append([x, w, bin_x, adicity])
-                        count += 1
-                    p = bls12_base(-x, r)
-                    if p.is_pseudoprime():
-                        bin_x = "-(" + bin_x + ")"
-                        if extended:
-                            output_list.append(
-                                [-x, len(item) + 1, bin_x, adicity])
-                        else:
-                            output_list.append([-x, w, bin_x, adicity])
-                        count += 1
+        (output_list, count) = generate_fields(limit, extended,
+                                               wx_list, signed_wx_list, bls12_scalar, bls12_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
             print(output)
     return output_list
 
 
-def find_BLS24_curve(adicity, weight_start=2, weight_end=8, _conservative=False, wid=0, processes=1, extended=False, verbose=True):
+def find_BLS24_curve(
+        adicity,
+        weight_start=2,
+        weight_end=8,
+        _conservative=False,
+        wid=0,
+        processes=1,
+        extended=False,
+        verbose=True):
     """Return parameters of valid BLS24 curves
 
     INPUT:
@@ -113,10 +94,12 @@ def find_BLS24_curve(adicity, weight_start=2, weight_end=8, _conservative=False,
     - ``adicity`` -- minimum 2-adicity of the scalar field
     - ``weight_start`` -- minimum Hamming weight for generator `x` (default 2)
     - ``weight_end`` -- maximum Hamming weight for generator `x` (default 8)
-    - ``conservative`` -- boolean indicating whether selecting conservative parameters or not (default False)
+    - ``conservative`` -- boolean indicating whether selecting
+                          conservative parameters or not (default False)
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
-    - ``extended`` -- boolean indicating whether to use negative powers of two in addition to the binary one (default False)
+    - ``extended`` -- boolean indicating whether to use negative powers
+                      of two in addition to the binary one (default False)
     - ``verbose`` -- boolean for more verbose outputs (default True)
 
     OUTPUT: a list of tuples `(x, w, repr, a)` where `x` is the generator of the BLS fields,
@@ -139,60 +122,29 @@ def find_BLS24_curve(adicity, weight_start=2, weight_end=8, _conservative=False,
                 combinations_with_replacement(range(0, 2), weight))
             signed_wx_set_2 = set(combinations_with_replacement(
                 reversed(range(0, 2)), weight))
-            # Actually still a Set, maybe there's a better way to remove duplicates
-            signed_wx_list = signed_wx_set_2 - signed_wx_set_1
-            signed_wx_list = list(signed_wx_set_1) + list(signed_wx_list)
+            signed_wx_list = list(signed_wx_set_1.union(signed_wx_set_2))
         else:
             signed_wx_list = [[0 for i in range(weight)]]
         output = f"Weight {weight+1}\n"
         total = len(wx_list) * len(signed_wx_list)
         output += f"\tTotal cases: {total}\n"
-        for item in wx_list:
-            for sign in signed_wx_list:
-                x = 1 << (limit)  # to start already at desired size for r
-                for i in range(len(sign)):
-                    if sign[i] == 0:
-                        x += 1 << item[i]
-                    else:
-                        x -= 1 << item[i]
-                r = bls24_scalar(x)
-                if r.nbits() > 255:
-                    continue
-                if gcd_small_primes(r) == None:
-                    continue
-                if r.is_pseudoprime():
-                    w = len(item) + 1
-                    adicity = twoadicity(r)
-                    p = bls24_base(x, r)
-                    bin_x = f"2^{limit}"
-                    for i in reversed(range(0, len(sign))):
-                        if sign[i] == 0:
-                            bin_x += f" + 2^{item[i]}"
-                        else:
-                            bin_x += f" - 2^{item[i]}"
-                    if p.is_pseudoprime():
-                        if extended:
-                            output_list.append(
-                                [x, len(item) + 1, bin_x, adicity])
-                        else:
-                            output_list.append([x, w, bin_x, adicity])
-                        count += 1
-                    p = bls24_base(-x, r)
-                    if p.is_pseudoprime():
-                        bin_x = "-(" + bin_x + ")"
-                        if extended:
-                            output_list.append(
-                                [-x, len(item) + 1, bin_x, adicity])
-                        else:
-                            output_list.append([-x, w, bin_x, adicity])
-                        count += 1
+        (output_list, count) = generate_fields(limit, extended,
+                                               wx_list, signed_wx_list, bls24_scalar, bls24_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
             print(output)
     return output_list
 
 
-def find_BLS48_curve(adicity, weight_start=2, weight_end=8, _conservative=False, wid=0, processes=1, extended=False, verbose=True):
+def find_BLS48_curve(
+        adicity,
+        weight_start=2,
+        weight_end=8,
+        _conservative=False,
+        wid=0,
+        processes=1,
+        extended=False,
+        verbose=True):
     """Return parameters of valid BLS48 curves
 
     INPUT:
@@ -200,10 +152,12 @@ def find_BLS48_curve(adicity, weight_start=2, weight_end=8, _conservative=False,
     - ``adicity`` -- minimum 2-adicity of the scalar field
     - ``weight_start`` -- minimum Hamming weight for generator `x` (default 2)
     - ``weight_end`` -- maximum Hamming weight for generator `x` (default 8)
-    - ``conservative`` -- boolean indicating whether selecting conservative parameters or not (default False)
+    - ``conservative`` -- boolean indicating whether selecting
+                          conservative parameters or not (default False)
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
-    - ``extended`` -- boolean indicating whether to use negative powers of two in addition to the binary one (default False)
+    - ``extended`` -- boolean indicating whether to use negative powers
+                      of two in addition to the binary one (default False)
     - ``verbose`` -- boolean for more verbose outputs (default True)
 
     OUTPUT: a list of tuples `(x, w, repr, a)` where `x` is the generator of the BLS fields,
@@ -219,61 +173,70 @@ def find_BLS48_curve(adicity, weight_start=2, weight_end=8, _conservative=False,
     assert adicity <= limit - weight_end
 
     for weight in range(weight_start-1 + wid, weight_end, processes):
-        count = 0
         wx_list = list(combinations(range(adicity, limit), weight))
         if extended:
             signed_wx_set_1 = set(
                 combinations_with_replacement(range(0, 2), weight))
             signed_wx_set_2 = set(combinations_with_replacement(
                 reversed(range(0, 2)), weight))
-            # Actually still a Set, maybe there's a better way to remove duplicates
             signed_wx_list = list(signed_wx_set_1.union(signed_wx_set_2))
         else:
             signed_wx_list = [[0 for i in range(weight)]]
         output = f"Weight {weight+1}\n"
         total = len(wx_list) * len(signed_wx_list)
         output += f"\tTotal cases: {total}\n"
-        for item in wx_list:
-            for sign in signed_wx_list:
-                x = 1 << (limit)  # to start already at desired size for r
-                for i in range(len(sign)):
-                    if sign[i] == 0:
-                        x += 1 << item[i]
-                    else:
-                        x -= 1 << item[i]
-                r = bls48_scalar(x)
-                if r.nbits() > 511:
-                    continue
-                if gcd_small_primes(r) == None:
-                    continue
-                if r.is_pseudoprime():
-                    w = len(item) + 1
-                    adicity = twoadicity(r)
-                    p = bls48_base(x, r)
-                    bin_x = "2^%s" % limit
-                    for i in reversed(range(0, len(sign))):
-                        bin_x += " %s 2^%s" % ("+" if sign[i]
-                                               == 0 else "-", item[i])
-                    if p.is_pseudoprime():
-                        if extended:
-                            output_list.append(
-                                [x, len(item) + 1, bin_x, adicity])
-                        else:
-                            output_list.append([x, w, bin_x, adicity])
-                        count += 1
-                    p = bls48_base(-x, r)
-                    if p.is_pseudoprime():
-                        bin_x = "-(" + bin_x + ")"
-                        if extended:
-                            output_list.append(
-                                [-x, len(item) + 1, bin_x, adicity])
-                        else:
-                            output_list.append([-x, w, bin_x, adicity])
-                        count += 1
+        (output_list, count) = generate_fields(limit, extended,
+                                               wx_list, signed_wx_list, bls48_scalar, bls48_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
             print(output)
     return output_list
+
+
+def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_func, base_func):
+    """Helper function for blsN search functions"""
+    count = 0
+    output_list = []
+    for item in weight_list:
+        for sign in signed_weight_list:
+            x = 1 << (limit)  # to start already at desired size for r
+            for i in range(len(sign)):
+                if sign[i] == 0:
+                    x += 1 << item[i]
+                else:
+                    x -= 1 << item[i]
+            r = scalar_func(x)
+            if r.nbits() > 511:
+                continue
+            if gcd_small_primes(r) is None:
+                continue
+            if r.is_pseudoprime():
+                w = len(item) + 1
+                adicity = twoadicity(r)
+                p = base_func(x, r)
+                bin_x = f"2^{limit}"
+                for i in reversed(range(0, len(sign))):
+                    if sign[i] == 0:
+                        bin_x += f" + 2^{item[i]}"
+                    else:
+                        bin_x += f" - 2^{item[i]}"
+                if p.is_pseudoprime():
+                    if extended:
+                        output_list.append(
+                            [x, len(item) + 1, bin_x, adicity])
+                    else:
+                        output_list.append([x, w, bin_x, adicity])
+                    count += 1
+                p = bls48_base(-x, r)
+                if p.is_pseudoprime():
+                    bin_x = "-(" + bin_x + ")"
+                    if extended:
+                        output_list.append(
+                            [-x, len(item) + 1, bin_x, adicity])
+                    else:
+                        output_list.append([-x, w, bin_x, adicity])
+                    count += 1
+    return (output_list, count)
 
 
 ########################################################################
