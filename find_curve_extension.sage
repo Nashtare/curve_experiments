@@ -154,7 +154,7 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
                     raise ValueError(
                         'Could not find an irreducible polynomial with specified parameters.')
             poly = poly_list[0]  # extract the polynomial from the list
-            Fp = Fp.extension(poly, f"u_{0}{1}".format(n, i))
+            Fp = Fp.extension(poly, f"u_{n}{i}")
             if wid == 0:
                 print(f"Modulus {count}: {poly}")
                 count += 1
