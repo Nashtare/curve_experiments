@@ -234,7 +234,35 @@ def find_irreducible_poly(ring, degree, use_root=False, max_coeff=2, output_all=
         return [min(list_poly, key=lambda t: len(t.coefficients()))]
 
 
+def degree_six_security(field, p, E):
+    # TODO: check returned values
+    assert field.order() == p ^ 6
+    card = E.cardinality()
+
+    # Sieving/Decomp. on Jac_H(\mathbb{F}_{p^2}), g = 3
+
+    #   - hyperelliptic case
+    if card % 4 == 0:
+        return p.nbits() * 5.0/3
+
+    #   - non-hyperelliptic case
+    # TODO
+
+    # Decomp. on Jac_H(\mathbb{F}_{p^3}), g = 2
+
+    if card % 2 == 1 and True:  # TODO: check j-invariant not in Fp^3
+        return p.nbits() * 12.0/7
+    elif False:  # TODO: check 2-torsion not included in Fq^2 x Fq^2
+        return p.nbits() * 12.0/7
+
+    # Ind. calc. on Jac_C(\mathbb{F}_p), d = 10
+    if False:  # TODO: check j-invariant
+        return p.nbits() * 5.0/3
+
+    return p.nbits() * 2
+
 ########################################################################
+
 
 def main():
     """Main function"""
