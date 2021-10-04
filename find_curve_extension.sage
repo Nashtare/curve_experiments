@@ -167,7 +167,7 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
         output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + x + {coeff_b} (b == a^{index})\n"
         output += f"\t\twith a = {extension.primitive_element()}\n"
         output += f"E(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {phi_inv(coeff_b)}\n"
-        output += f"E generator point: {g}\n" % g
+        output += f"E generator point: {g}\n"
         output += f"E prime order: {order} ({order.nbits()} bits)\n"
         output += f"E cofactor: {cofactor}\n"
         output += f"E security (Pollard-Rho): {rho_security}\n"
