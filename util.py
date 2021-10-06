@@ -118,7 +118,7 @@ def twist_security(p, q):
 
 def repr_field_element(n, nb_hex=64, output_hex=True):
     assert nb_hex % 16 == 0
-    n = str(hex(Integer(n)))
+    n = str(hex(Integer(n)))[2:]
     while len(n) < nb_hex:
         n = "0" + n
     num_list = range(nb_hex//16)
@@ -143,7 +143,7 @@ def pretty_element_repr(n, nb_hex=64, output_hex=True):
 
 def repr_field_element_bytes(n, nb_bytes=32, output_hex=False):
     assert nb_bytes % 16 == 0
-    n = str(hex(Integer(n)))
+    n = str(hex(Integer(n)))[2:]
     while len(n) < nb_bytes * 2:
         n = "0" + n
     num_list = range(nb_bytes)
