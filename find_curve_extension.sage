@@ -138,9 +138,11 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
 
     """
 
+    if wid == 0:
+        info = ""
     Fp = GF(prime)
     if wid == 0:
-        print(Fp)
+        info += f"{Fp}\n"
     Fpx = Fp['x']
     factors = list(Integer(extension_degree).factor())
     count = 1
@@ -156,10 +158,13 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
             poly = poly_list[0]  # extract the polynomial from the list
             Fp = Fp.extension(poly, f"u_{n}{i}")
             if wid == 0:
-                print(f"Modulus {count}: {poly}")
+                info += f"Modulus {count}: {poly}\n"
                 count += 1
             Fpx = Fp['x']
 
+    if wid == 0:
+        info += f"Looking for curves with max cofactor: {max_cofactor}\n"
+        print(info)
     extension, phi, phi_inv = make_finite_field(Fp)
 
     for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(extension, max_cofactor, wid, processes):
@@ -268,16 +273,18 @@ def main():
     """Main function"""
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
+    small_order = "--small-order" in args
     strategy = print_curve
     help = "--help" in args
     args = [arg for arg in args if not arg.startswith("--")]
 
     if help:
         print("""
-Cmd: sage find_curve_extension.sage [--sequential] <prime> <extension_degree> <max_cofactor>
+Cmd: sage find_curve_extension.sage [--sequential] [--small-order] <prime> <extension_degree> <max_cofactor>
 
 Args:
     --sequential        Uses only one process
+    --small-order       Looks for curves with prime order from 2^252 (overrides cofactor)
     <prime>             A prime number, default 2^62 - 111 * 2^39 + 1
     <extension_degree>  The extension degree of the prime field, default 6
     <max_cofactor>      Maximum cofactor of the curve, default 64
@@ -286,7 +293,11 @@ Args:
 
     prime = int(args[0]) if len(args) > 0 else 2 ^ 62 - 111 * 2 ^ 39 + 1
     extension_degree = int(args[1]) if len(args) > 1 else 6
-    max_cofactor = int(args[2]) if len(args) > 2 else 64
+    max_cofactor = 64
+    if small_order:
+        max_cofactor = 2^((prime^extension_degree).nbits() - 252)
+    elif len(args) > 2:
+        int(args[2])
 
     if processes == 1:
         strategy(prime, extension_degree, max_cofactor)
