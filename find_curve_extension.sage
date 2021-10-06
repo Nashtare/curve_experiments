@@ -107,8 +107,15 @@ def find_curve(extension, max_cofactor, wid=0, processes=1):
         sys.stdout.write("o")
         sys.stdout.flush()
         g = E.random_element()
-        while g.order() != prime_order:
-            g = E.random_element()
+        g_ord = g.order()
+        while g_ord != prime_order:
+            if g_ord > prime_order:
+                cof = Integer(g_ord / prime_order)
+                g = cof * g
+                g_ord = prime_order
+            else:
+                g = E.random_element()
+                g_ord = g.order()
 
         (rho_sec, k) = curve_security(
             extension.base().cardinality(), n, prime_order)
@@ -165,17 +172,25 @@ def print_curve(prime, extension_degree, max_cofactor, wid=0, processes=1):
     if wid == 0:
         info += f"Looking for curves with max cofactor: {max_cofactor}\n"
         print(info)
-    extension, phi, phi_inv = make_finite_field(Fp)
+    extension, phi, psi = make_finite_field(Fp)
 
     for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(extension, max_cofactor, wid, processes):
+        coeff_b_prime = psi(coeff_b)
+        E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
         output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + x + {coeff_b} (b == a^{index})\n"
         output += f"\t\twith a = {extension.primitive_element()}\n"
-        output += f"E(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {phi_inv(coeff_b)}\n"
+        output += f"E'(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {coeff_b_prime}\n"
         output += f"E generator point: {g}\n"
+        gx = g.xy()[0]
+        gy = g.xy()[1]
+        g_prime = E_prime(psi(gx), psi(gy))
+        output += f"E' generator point: {g_prime}\n"
         output += f"E prime order: {order} ({order.nbits()} bits)\n"
-        output += f"E cofactor: {cofactor}\n"
-        output += f"E security (Pollard-Rho): {rho_security}\n"
+        output += f"E cofactor: {cofactor}"
+        if cofactor > 4:
+            output += f" ( = {cofactor % 4} % 4 )"
+        output += f"\nE security (Pollard-Rho): {rho_security}\n"
         output += f"E embedding degree: {embedding_degree} (>2^{embedding_degree.nbits()-1}) \n"
         print(output)
     return
