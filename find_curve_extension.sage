@@ -316,7 +316,7 @@ Args:
     if small_order:
         max_cofactor = 2^((prime^extension_degree).nbits() - 252)
     elif len(args) > 2:
-        int(args[2])
+        max_cofactor = int(args[2])
 
     if processes == 1:
         strategy(prime, factorization_mode, extension_degree, max_cofactor)
