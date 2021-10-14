@@ -8,6 +8,7 @@ SMALL_PRIMES = (3, 5, 7, 11, 13, 17)
 # Starts at 2 as y^2 = x^3 + 1 cannot have prime order
 COEFFICIENT_RANGE = range(2, 20)
 RHO_SECURITY = 125
+EXTENSION_SECURITY = 120
 TWIST_SECURITY = 100
 MIN_EMBEDDING_DEGREE = 200
 # For Pollard-Rho security analysis

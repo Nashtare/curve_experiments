@@ -7,7 +7,7 @@ from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import curve_security, MIN_EMBEDDING_DEGREE, RHO_SECURITY
+from util import curve_security, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -91,6 +91,7 @@ def find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid=0,
     """
 
     a = extension.primitive_element()
+    p = extension.base_ring().order()
     for i in range(wid + 1, 1000000000, processes):
         sys.stdout.write(".")
         sys.stdout.flush()
@@ -132,6 +133,14 @@ def find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid=0,
 
         if rho_sec < RHO_SECURITY:
             continue
+
+        if extension.degree() == 6:
+            sys.stdout.write("~")
+            sys.stdout.flush()
+
+            extension_security = degree_six_security(extension, p, E)
+            if extension_security < EXTENSION_SECURITY:
+                continue
 
         yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k)
 
@@ -272,20 +281,20 @@ def degree_six_security(field, p, E):
         return p.nbits() * 5.0/3
 
     #   - non-hyperelliptic case
-    # TODO
+    # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
     # Decomp. on Jac_H(\mathbb{F}_{p^3}), g = 2
 
-    if card % 2 == 1 and True:  # TODO: check j-invariant not in Fp^3
+    if card % 2 == 1 and False:
+        # TODO: check j-invariant not in Fp^3 (is by construction, would need proper checking)
         return p.nbits() * 12.0/7
-    elif False:  # TODO: check 2-torsion not included in Fq^2 x Fq^2
+    elif E.two_torsion_rank() == 2:
         return p.nbits() * 12.0/7
 
     # Ind. calc. on Jac_C(\mathbb{F}_p), d = 10
-    if False:  # TODO: check j-invariant
-        return p.nbits() * 5.0/3
+    # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
-    return p.nbits() * 2
+    return p.nbits() * 2  # Lower bound on the remaining unchecked attacks
 
 ########################################################################
 
@@ -325,7 +334,8 @@ Args:
         max_cofactor = int(args[2])
 
     if processes == 1:
-        strategy(prime, factorization_mode, extension_degree, max_cofactor)
+        strategy(prime, factorization_mode, extension_degree,
+                 min_cofactor, max_cofactor)
     else:
         print(f"Using {processes} processes.")
         pool = Pool(processes=processes)
