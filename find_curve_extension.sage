@@ -63,13 +63,14 @@ def make_finite_field(k):
         return k_new, phi, phi_inv
 
 
-def find_curve(factorization_mode, extension, max_cofactor, wid=0, processes=1):
+def find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid=0, processes=1):
     r"""Yield curve constructed over a prime field extension.
 
     INPUT:
 
     - ``factorization_mode`` -- the algorithm for factoring integers, can be ECM or PARI (default PARI)
     - ``extension`` -- the field extension
+    - ``min_cofactor`` -- the minimum cofactor for the curve order
     - ``max_cofactor`` -- the maximum cofactor for the curve order
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
@@ -102,6 +103,8 @@ def find_curve(factorization_mode, extension, max_cofactor, wid=0, processes=1):
         n = E.count_points()
         prime_order = list(factorization_mode(n))[-1]
         cofactor = n // prime_order
+        if cofactor < min_cofactor:
+            continue
         if cofactor > max_cofactor:
             continue
 
@@ -133,7 +136,7 @@ def find_curve(factorization_mode, extension, max_cofactor, wid=0, processes=1):
         yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k)
 
 
-def print_curve(factorization_mode, prime, extension_degree, max_cofactor, wid=0, processes=1):
+def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_cofactor, wid=0, processes=1):
     r"""Print parameters of curves defined over a prime field extension
 
     INPUT:
@@ -141,6 +144,7 @@ def print_curve(factorization_mode, prime, extension_degree, max_cofactor, wid=0
     - ``factorization_mode`` -- the algorithm for factoring integers, can be ECM or PARI (default PARI)
     - ``prime`` -- the base prime defining Fp
     - ``extension_degree`` -- the targeted extension degree, defining Fp^n on which the curves will be constructed
+    - ``min_cofactor`` -- the minimum cofactor for the curve order
     - ``max_cofactor`` -- the maximum cofactor for the curve order
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
@@ -176,7 +180,7 @@ def print_curve(factorization_mode, prime, extension_degree, max_cofactor, wid=0
         print(info)
     extension, phi, psi = make_finite_field(Fp)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(factorization_mode, extension, max_cofactor, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid, processes):
         coeff_b_prime = psi(coeff_b)
         E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
@@ -312,9 +316,11 @@ Args:
 
     prime = int(args[0]) if len(args) > 0 else 2 ^ 62 - 111 * 2 ^ 39 + 1
     extension_degree = int(args[1]) if len(args) > 1 else 6
+    min_cofactor = 0
     max_cofactor = 64
     if small_order:
-        max_cofactor = 2^((prime^extension_degree).nbits() - 252)
+        min_cofactor = 2 ^ ((prime ^ extension_degree).nbits() - 256)
+        max_cofactor = 2 ^ ((prime ^ extension_degree).nbits() - 250)
     elif len(args) > 2:
         max_cofactor = int(args[2])
 
@@ -327,7 +333,7 @@ Args:
         try:
             for wid in range(processes):
                 pool.apply_async(
-                    worker, (strategy, factorization_mode, prime, extension_degree, max_cofactor, wid, processes))
+                    worker, (strategy, factorization_mode, prime, extension_degree, min_cofactor, max_cofactor, wid, processes))
 
             while True:
                 sleep(1000)

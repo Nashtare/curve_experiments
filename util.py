@@ -121,8 +121,7 @@ def repr_field_element(n, nb_hex=64, output_hex=True):
     n = str(hex(Integer(n)))[2:]
     while len(n) < nb_hex:
         n = "0" + n
-    num_list = range(nb_hex//16)
-    num_list.reverse()
+    num_list = reversed(range(nb_hex//16))
     res = []
     for i in num_list:
         if output_hex:
