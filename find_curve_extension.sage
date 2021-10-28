@@ -63,13 +63,14 @@ def make_finite_field(k):
         return k_new, phi, phi_inv
 
 
-def find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid=0, processes=1):
+def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max_cofactor, wid=0, processes=1):
     r"""Yield curve constructed over a prime field extension.
 
     INPUT:
 
     - ``factorization_mode`` -- the algorithm for factoring integers, can be ECM or PARI (default PARI)
-    - ``extension`` -- the field extension
+    - ``extension`` -- the field direct extension
+    - ``extension_tower`` -- the field seen as a final extension tower
     - ``min_cofactor`` -- the minimum cofactor for the curve order
     - ``max_cofactor`` -- the maximum cofactor for the curve order
     - ``wid`` -- current job id (default 0)
@@ -138,7 +139,8 @@ def find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid=0,
             sys.stdout.write("~")
             sys.stdout.flush()
 
-            extension_security = degree_six_security(extension, p, E)
+            extension_security = degree_six_security(
+                extension, extension_tower, p, E)
             if extension_security < EXTENSION_SECURITY:
                 continue
 
@@ -189,7 +191,7 @@ def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_c
         print(info)
     extension, phi, psi = make_finite_field(Fp)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(factorization_mode, extension, min_cofactor, max_cofactor, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(factorization_mode, extension, Fp, min_cofactor, max_cofactor, wid, processes):
         coeff_b_prime = psi(coeff_b)
         E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
@@ -269,10 +271,22 @@ def find_irreducible_poly(ring, degree, use_root=False, max_coeff=2, output_all=
         return [min(list_poly, key=lambda t: len(t.coefficients()))]
 
 
-def degree_six_security(field, p, E):
-    # TODO: check returned values
+def degree_six_security(field, field_tower, p, E):
     assert field.order() == p ^ 6
     card = E.cardinality()
+
+    field_bis, _, psi = make_finite_field(extension_tower)
+    assert(field_bis == field)
+    a = E.a4()
+    b = E.a6()
+    E_tower = EllipticCurve(field_tower, [psi(a), psi(b)])
+    j = E_tower.j_invariant()
+
+    fp2 = field_tower.base_ring()
+    fp = fp2.base_ring()
+
+    K.<x> = field_tower[]
+    curve_polynomial = K(x ^ 3 + psi(a)*x + psi(b))
 
     # Sieving/Decomp. on Jac_H(\mathbb{F}_{p^2}), g = 3
 
@@ -285,16 +299,24 @@ def degree_six_security(field, p, E):
 
     # Decomp. on Jac_H(\mathbb{F}_{p^3}), g = 2
 
-    if card % 2 == 1 and False:
-        # TODO: check j-invariant not in Fp^3 (is by construction, would need proper checking)
-        return p.nbits() * 12.0/7
+    if card % 2 == 1:
+        if j in fp or j in fp2:
+            return p.nbits() * 12.0/7
     elif E.two_torsion_rank() == 2:
         return p.nbits() * 12.0/7
 
     # Ind. calc. on Jac_C(\mathbb{F}_p), d = 10
     # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
-    return p.nbits() * 2  # Lower bound on the remaining unchecked attacks
+    # GHS method, g = 9
+    roots = curve_polynomial.roots()
+    if roots != []:
+        for root in roots:
+            if root ^ p in roots:
+                return p.nbits() * 12.0/7
+
+    # Ind. calc. on Jac_H(\mathbb{F}_{p^2}), g = 3
+    return p.nbits() * 8.0/3
 
 ########################################################################
 
@@ -317,13 +339,14 @@ Args:
     --sequential        Uses only one process
     --small-order       Looks for curves with prime order from 2^252 (overrides cofactor)
     --ecm               Specify to use Zimmerman's GMP-ECM factorization method (default PARI)
-    <prime>             A prime number, default 2^62 - 111 * 2^39 + 1
+    <prime>             A prime number, default 2^62 + 2^56 + 2^55 + 1
     <extension_degree>  The extension degree of the prime field, default 6
     <max_cofactor>      Maximum cofactor of the curve, default 64
 """)
         return
 
-    prime = int(args[0]) if len(args) > 0 else 2 ^ 62 - 111 * 2 ^ 39 + 1
+    prime = int(args[0]) if len(
+        args) > 0 else 4719772409484279809  # 2^62 + 2^56 + 2^55 + 1
     extension_degree = int(args[1]) if len(args) > 1 else 6
     min_cofactor = 0
     max_cofactor = 64
