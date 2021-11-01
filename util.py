@@ -146,10 +146,8 @@ def repr_field_element_bytes(n, nb_bytes=32, output_hex=False):
     n = str(hex(Integer(n)))[2:]
     while len(n) < nb_bytes * 2:
         n = "0" + n
-    num_list = range(nb_bytes)
-    num_list.reverse()
     res = []
-    for i in num_list:
+    for i in range(nb_bytes-1, -1, -1):
         if output_hex:
             res.append("0x" + n[i*2:i*2+2])
         else:

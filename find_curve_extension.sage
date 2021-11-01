@@ -112,16 +112,22 @@ def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max
 
         sys.stdout.write("o")
         sys.stdout.flush()
-        g = E.random_element()
-        g_ord = g.order()
-        while g_ord != prime_order:
-            if g_ord > prime_order:
-                cof = Integer(g_ord / prime_order)
-                g = cof * g
-                g_ord = prime_order
-            else:
-                g = E.random_element()
+        bin = BinaryStrings()
+        gen_x_bin = bin.encoding("Topos")
+        gen_x = extension(int(str(gen_x_bin), 2))
+        gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
+        g = E[0]
+        g_ord = 1
+        while True:
+            if gen_y2.is_square():
+                g = E((gen_x, gen_y2.sqrt()))
                 g_ord = g.order()
+                if g_ord >= prime_order:
+                    break
+            gen_x += 1
+            gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
+        if g_ord != prime_order:
+            g = cofactor * g
 
         (rho_sec, k) = curve_security(
             extension.base().cardinality(), n, prime_order)
@@ -275,7 +281,7 @@ def degree_six_security(field, field_tower, p, E):
     assert field.order() == p ^ 6
     card = E.cardinality()
 
-    field_bis, _, psi = make_finite_field(extension_tower)
+    field_bis, _, psi = make_finite_field(field_tower)
     assert(field_bis == field)
     a = E.a4()
     b = E.a6()
@@ -285,7 +291,8 @@ def degree_six_security(field, field_tower, p, E):
     fp2 = field_tower.base_ring()
     fp = fp2.base_ring()
 
-    K.<x> = field_tower[]
+    K = field_tower["x"]
+    x = K.gen()
     curve_polynomial = K(x ^ 3 + psi(a)*x + psi(b))
 
     # Sieving/Decomp. on Jac_H(\mathbb{F}_{p^2}), g = 3
