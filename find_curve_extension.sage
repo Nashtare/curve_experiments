@@ -112,20 +112,22 @@ def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max
 
         sys.stdout.write("o")
         sys.stdout.flush()
+
         bin = BinaryStrings()
         gen_x_bin = bin.encoding("Topos")
         gen_x = extension(int(str(gen_x_bin), 2))
         gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
-        g = E[0]
-        g_ord = 1
         while True:
             if gen_y2.is_square():
                 g = E((gen_x, gen_y2.sqrt()))
                 g_ord = g.order()
                 if g_ord >= prime_order:
+                    sys.stdout.write("@")
+                    sys.stdout.flush()
                     break
             gen_x += 1
             gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
+
         if g_ord != prime_order:
             g = cofactor * g
 
@@ -149,8 +151,10 @@ def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max
                 extension, extension_tower, p, E)
             if extension_security < EXTENSION_SECURITY:
                 continue
+        else:
+            extension_security = 0
 
-        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k)
+        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_security)
 
 
 def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_cofactor, wid=0, processes=1):
@@ -197,24 +201,28 @@ def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_c
         print(info)
     extension, phi, psi = make_finite_field(Fp)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree) in find_curve(factorization_mode, extension, Fp, min_cofactor, max_cofactor, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security) in find_curve(factorization_mode, extension, Fp, min_cofactor, max_cofactor, wid, processes):
         coeff_b_prime = psi(coeff_b)
         E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
+        output += "# Curve with basefield seen as a direct extension\n"
         output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + x + {coeff_b} (b == a^{index})\n"
         output += f"\t\twith a = {extension.primitive_element()}\n"
-        output += f"E'(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {coeff_b_prime}\n"
+        output += "# Curve with basefield seen as a towered extension\n"
+        output += f"E'(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {coeff_b_prime}\n\n"
         output += f"E generator point: {g}\n"
         gx = g.xy()[0]
         gy = g.xy()[1]
         g_prime = E_prime(psi(gx), psi(gy))
-        output += f"E' generator point: {g_prime}\n"
-        output += f"E prime order: {order} ({order.nbits()} bits)\n"
-        output += f"E cofactor: {cofactor}"
+        output += f"E' generator point: {g_prime}\n\n"
+        output += f"Curve prime order: {order} ({order.nbits()} bits)\n"
+        output += f"Curve cofactor: {cofactor}"
         if cofactor > 4:
             output += f" ( = {cofactor % 4} % 4 )"
-        output += f"\nE security (Pollard-Rho): {rho_security}\n"
-        output += f"E embedding degree: {embedding_degree} (>2^{embedding_degree.nbits()-1}) \n"
+        output += f"\nCurve security (Pollard-Rho): {'%.2f'%(rho_security)}\n"
+        output += f"Curve embedding degree: {embedding_degree} (>2^{embedding_degree.nbits()-1}) \n"
+        if extension_degree == 6:
+            output += f"Curve extension security: ≥ {'%.2f'%(extension_security)}\n\n"
         print(output)
     return
 
@@ -364,7 +372,7 @@ Args:
         max_cofactor = int(args[2])
 
     if processes == 1:
-        strategy(prime, factorization_mode, extension_degree,
+        strategy(factorization_mode, prime, extension_degree,
                  min_cofactor, max_cofactor)
     else:
         print(f"Using {processes} processes.")
