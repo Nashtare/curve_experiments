@@ -113,6 +113,7 @@ def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max
         sys.stdout.write("o")
         sys.stdout.flush()
 
+        # TODO: use proper hash-to-curve algorithm
         bin = BinaryStrings()
         gen_x_bin = bin.encoding("Topos")
         gen_x = extension(int(str(gen_x_bin), 2))
@@ -172,11 +173,9 @@ def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_c
 
     """
 
-    if wid == 0:
-        info = ""
     Fp = GF(prime)
     if wid == 0:
-        info += f"{Fp}\n"
+        info = f"\n{Fp}\n"
     Fpx = Fp['x']
     factors = list(factor(Integer(extension_degree)))
     count = 1
