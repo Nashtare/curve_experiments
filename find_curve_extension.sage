@@ -323,7 +323,7 @@ def degree_six_security(field, field_tower, p, E):
     # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
     # GHS method, g = 9
-    roots = curve_polynomial.roots()
+    roots = curve_polynomial.roots(multiplicities=false)
     if roots != []:
         for root in roots:
             if root ^ p in roots:
