@@ -63,12 +63,11 @@ def make_finite_field(k):
         return k_new, phi, phi_inv
 
 
-def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max_cofactor, wid=0, processes=1):
+def find_curve(extension, extension_tower, min_cofactor, max_cofactor, wid=0, processes=1):
     r"""Yield curve constructed over a prime field extension.
 
     INPUT:
 
-    - ``factorization_mode`` -- the algorithm for factoring integers, can be ECM or PARI (default PARI)
     - ``extension`` -- the field direct extension
     - ``extension_tower`` -- the field seen as a final extension tower
     - ``min_cofactor`` -- the minimum cofactor for the curve order
@@ -103,7 +102,7 @@ def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max
         E = EllipticCurve(extension, [coeff_a, coeff_b])
 
         n = E.count_points()
-        prime_order = list(factorization_mode(n))[-1]
+        prime_order = list(ecm.factor(n))[-1]
         cofactor = n // prime_order
         if cofactor < min_cofactor:
             continue
@@ -158,12 +157,11 @@ def find_curve(factorization_mode, extension, extension_tower, min_cofactor, max
         yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_security)
 
 
-def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_cofactor, wid=0, processes=1):
+def print_curve(prime, extension_degree, min_cofactor, max_cofactor, wid=0, processes=1):
     r"""Print parameters of curves defined over a prime field extension
 
     INPUT:
 
-    - ``factorization_mode`` -- the algorithm for factoring integers, can be ECM or PARI (default PARI)
     - ``prime`` -- the base prime defining Fp
     - ``extension_degree`` -- the targeted extension degree, defining Fp^n on which the curves will be constructed
     - ``min_cofactor`` -- the minimum cofactor for the curve order
@@ -200,7 +198,7 @@ def print_curve(factorization_mode, prime, extension_degree, min_cofactor, max_c
         print(info)
     extension, phi, psi = make_finite_field(Fp)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security) in find_curve(factorization_mode, extension, Fp, min_cofactor, max_cofactor, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security) in find_curve(extension, Fp, min_cofactor, max_cofactor, wid, processes):
         coeff_b_prime = psi(coeff_b)
         E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
@@ -340,7 +338,6 @@ def main():
     args = sys.argv[1:]
     processes = 1 if "--sequential" in args else cpu_count()
     small_order = "--small-order" in args
-    factorization_mode = ecm.factor if "--ecm" in args else factor
     strategy = print_curve
     help = "--help" in args
     args = [arg for arg in args if not arg.startswith("--")]
@@ -352,7 +349,6 @@ Cmd: sage find_curve_extension.sage [--sequential] [--small-order] <prime> <exte
 Args:
     --sequential        Uses only one process
     --small-order       Looks for curves with prime order from 2^252 (overrides cofactor)
-    --ecm               Specify to use Zimmerman's GMP-ECM factorization method (default PARI)
     <prime>             A prime number, default 2^62 + 2^56 + 2^55 + 1
     <extension_degree>  The extension degree of the prime field, default 6
     <max_cofactor>      Maximum cofactor of the curve, default 64
@@ -371,7 +367,7 @@ Args:
         max_cofactor = int(args[2])
 
     if processes == 1:
-        strategy(factorization_mode, prime, extension_degree,
+        strategy(prime, extension_degree,
                  min_cofactor, max_cofactor)
     else:
         print(f"Using {processes} processes.")
@@ -380,7 +376,7 @@ Args:
         try:
             for wid in range(processes):
                 pool.apply_async(
-                    worker, (strategy, factorization_mode, prime, extension_degree, min_cofactor, max_cofactor, wid, processes))
+                    worker, (strategy, prime, extension_degree, min_cofactor, max_cofactor, wid, processes))
 
             while True:
                 sleep(1000)
