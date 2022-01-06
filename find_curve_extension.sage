@@ -319,12 +319,12 @@ def degree_six_security(field, field_tower, p, E):
     # Ind. calc. on Jac_C(\mathbb{F}_p), d = 10
     # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
-    # GHS method, g = 9
+    # GHS method, with either Fp2 or Fp3 as basefield
     roots = curve_polynomial.roots(multiplicities=false)
     if roots != []:
         for root in roots:
-            if root ^ p in roots:
-                return p.nbits() * 12.0/7
+            if (root ** (p**2) in roots) or (root ** (p**3) in roots):
+                return p.nbits() * 8.0/3
 
     # Ind. calc. on Jac_H(\mathbb{F}_{p^2}), g = 3
     # Heavier cost than Weil descent attack, so discarded here
