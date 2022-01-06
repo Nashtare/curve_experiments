@@ -307,13 +307,12 @@ def degree_six_security(field, field_tower, p, E):
         return p.nbits() * 5.0/3
 
     #   - non-hyperelliptic case
-    # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
+    # Heavier cost than Weil descent attack, so discarded here
 
     # Decomp. on Jac_H(\mathbb{F}_{p^3}), g = 2
 
-    if card % 2 == 1:
-        if j in fp or j in fp2:
-            return p.nbits() * 12.0/7
+    if card % 2 == 1 and True:  # no j-invariant check as we can always convert to Sholten
+        return p.nbits() * 12.0/7  # form with the current construction if card % 2 == 1
     elif E.two_torsion_rank() == 2:
         return p.nbits() * 12.0/7
 
@@ -328,7 +327,11 @@ def degree_six_security(field, field_tower, p, E):
                 return p.nbits() * 12.0/7
 
     # Ind. calc. on Jac_H(\mathbb{F}_{p^2}), g = 3
-    return p.nbits() * 8.0/3
+    # Heavier cost than Weil descent attack, so discarded here
+
+    # Weil descent attack with genus 2
+    g = 2
+    return log((g ^ 2 * log(p, 2) ^ 3) * factorial(g) * p + (g ^ 2 * log(p, 2)) * p ^ 2, 2)
 
 ########################################################################
 
