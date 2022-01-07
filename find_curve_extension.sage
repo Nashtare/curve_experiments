@@ -7,7 +7,7 @@ from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import curve_security, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY
+from util import curve_security, twist_security_ignore_embedding_degree, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -159,7 +159,13 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
         else:
             extension_security = 0
 
-        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_security)
+        twist_rho_sec = twist_security_ignore_embedding_degree(
+            extension.cardinality(), n)
+
+        if twist_rho_sec < TWIST_SECURITY:
+            continue
+
+        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_security, twist_rho_sec)
 
 
 def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
@@ -208,7 +214,7 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
         print(info)
     extension, _phi, psi = make_finite_field(Fp)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security) in find_curve(extension, Fp, min_cofactor, max_cofactor, small_order, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security, twist_rho_security) in find_curve(extension, Fp, min_cofactor, max_cofactor, small_order, wid, processes):
         coeff_b_prime = psi(coeff_b)
         E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
@@ -228,6 +234,7 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
             output += f" ( = {cofactor % 4} % 4 )"
         output += f"\nCurve security (Pollard-Rho): {'%.2f'%(rho_security)}\n"
         output += f"Curve embedding degree: {embedding_degree} (>2^{embedding_degree.nbits()-1}) \n"
+        output += f"Twist security (Pollard-Rho): {'%.2f'%(twist_rho_security)}\n"
         if extension_degree == 6:
             output += f"Curve extension security: ≥ {'%.2f'%(extension_security)}\n\n"
         print(output)

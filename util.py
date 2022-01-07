@@ -113,6 +113,11 @@ def twist_security(p, q):
     return curve_security(p, 2*(p+1) - q)
 
 
+def twist_security_ignore_embedding_degree(p, q):
+    r = factor(2*(p+1) - q)[-1][0]
+    return log(PI_12 * r, 4)
+
+
 ####################################################
 # FIELD UTILITY FUNCTIONS
 ####################################################
