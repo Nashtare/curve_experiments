@@ -89,6 +89,8 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
     - ``coeff_b`` -- the b coefficient of the curve in short Weierstrass form
     - ``rho_sec`` -- the Pollard-Rho security of the curve
     - ``k`` -- the embedding degree of the curve
+    - ``extension_sec`` -- the extension-specific attacks security of the curve
+    - ``twist_rho_sec`` -- the Pollard-Rho security of the twist
 
     """
 
@@ -152,12 +154,12 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
             sys.stdout.write("~")
             sys.stdout.flush()
 
-            extension_security = degree_six_security(
+            extension_sec = degree_six_security(
                 extension, extension_tower, p, E, n)
-            if extension_security < EXTENSION_SECURITY:
+            if extension_sec < EXTENSION_SECURITY:
                 continue
         else:
-            extension_security = 0
+            extension_sec = 0
 
         twist_rho_sec = twist_security_ignore_embedding_degree(
             extension.cardinality(), n)
@@ -165,7 +167,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
         if twist_rho_sec < TWIST_SECURITY:
             continue
 
-        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_security, twist_rho_sec)
+        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_sec, twist_rho_sec)
 
 
 def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
@@ -362,7 +364,7 @@ Cmd: sage find_curve_extension.sage [--sequential] [--small-order] <prime> <exte
 
 Args:
     --sequential        Uses only one process
-    --small-order       Looks for curves with prime order from 2^252 (overrides cofactor)
+    --small-order       Looks for curves with 254 or 255-bit prime order (overrides cofactor)
     <prime>             A prime number, default 2^62 + 2^56 + 2^55 + 1
     <extension_degree>  The extension degree of the prime field, default 6
     <max_cofactor>      Maximum cofactor of the curve, default 64
