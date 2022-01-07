@@ -63,7 +63,7 @@ def make_finite_field(k):
         return k_new, phi, phi_inv
 
 
-def find_curve(extension, extension_tower, min_cofactor, max_cofactor, wid=0, processes=1):
+def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
     r"""Yield curve constructed over a prime field extension.
 
     INPUT:
@@ -72,6 +72,8 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, wid=0, pr
     - ``extension_tower`` -- the field seen as a final extension tower
     - ``min_cofactor`` -- the minimum cofactor for the curve order
     - ``max_cofactor`` -- the maximum cofactor for the curve order
+    - ``small_order`` -- boolean indicating whether to look for small orders (254/255 bits).
+            Overrides `min_cofactor` and `max_cofactor` if set to `True`.
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
 
@@ -104,9 +106,12 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, wid=0, pr
         n = E.count_points()
         prime_order = list(ecm.factor(n))[-1]
         cofactor = n // prime_order
-        if cofactor < min_cofactor:
+        if small_order:
+            if prime_order.nbits() < 254 or prime_order.nbits() > 255:
+                continue
+        elif cofactor < min_cofactor:
             continue
-        if cofactor > max_cofactor:
+        elif cofactor > max_cofactor:
             continue
 
         sys.stdout.write("o")
@@ -148,7 +153,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, wid=0, pr
             sys.stdout.flush()
 
             extension_security = degree_six_security(
-                extension, extension_tower, p, E)
+                extension, extension_tower, p, E, n)
             if extension_security < EXTENSION_SECURITY:
                 continue
         else:
@@ -157,7 +162,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, wid=0, pr
         yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_security)
 
 
-def print_curve(prime, extension_degree, min_cofactor, max_cofactor, wid=0, processes=1):
+def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
     r"""Print parameters of curves defined over a prime field extension
 
     INPUT:
@@ -166,6 +171,8 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, wid=0, proc
     - ``extension_degree`` -- the targeted extension degree, defining Fp^n on which the curves will be constructed
     - ``min_cofactor`` -- the minimum cofactor for the curve order
     - ``max_cofactor`` -- the maximum cofactor for the curve order
+    - ``small_order`` -- boolean indicating whether to look for small orders (254/255 bits).
+            Overrides `min_cofactor` and `max_cofactor` if set to `True`.
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
 
@@ -173,7 +180,7 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, wid=0, proc
 
     Fp = GF(prime)
     if wid == 0:
-        info = f"\n{Fp}\n"
+        info = f"\n{Fp}.\n"
     Fpx = Fp['x']
     factors = list(factor(Integer(extension_degree)))
     count = 1
@@ -189,16 +196,19 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, wid=0, proc
             poly = poly_list[0]  # extract the polynomial from the list
             Fp = Fp.extension(poly, f"u_{n}{i}")
             if wid == 0:
-                info += f"Modulus {count}: {poly}\n"
+                info += f"Modulus {count}: {poly}.\n"
                 count += 1
             Fpx = Fp['x']
 
     if wid == 0:
-        info += f"Looking for curves with max cofactor: {max_cofactor}\n"
+        if small_order:
+            info += f"Looking for curves with 254 or 255-bit prime order.\n"
+        else:
+            info += f"Looking for curves with max cofactor: {max_cofactor}.\n"
         print(info)
-    extension, phi, psi = make_finite_field(Fp)
+    extension, _phi, psi = make_finite_field(Fp)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security) in find_curve(extension, Fp, min_cofactor, max_cofactor, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security) in find_curve(extension, Fp, min_cofactor, max_cofactor, small_order, wid, processes):
         coeff_b_prime = psi(coeff_b)
         E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
         output = "\n\n\n"
@@ -282,19 +292,13 @@ def find_irreducible_poly(ring, degree, use_root=False, max_coeff=2, output_all=
         return [min(list_poly, key=lambda t: len(t.coefficients()))]
 
 
-def degree_six_security(field, field_tower, p, E):
+def degree_six_security(field, field_tower, p, E, curve_order):
     assert field.order() == p ^ 6
-    card = E.cardinality()
 
     field_bis, _, psi = make_finite_field(field_tower)
     assert(field_bis == field)
     a = E.a4()
     b = E.a6()
-    E_tower = EllipticCurve(field_tower, [psi(a), psi(b)])
-    j = E_tower.j_invariant()
-
-    fp2 = field_tower.base_ring()
-    fp = fp2.base_ring()
 
     K = field_tower["x"]
     x = K.gen()
@@ -303,7 +307,7 @@ def degree_six_security(field, field_tower, p, E):
     # Sieving/Decomp. on Jac_H(\mathbb{F}_{p^2}), g = 3
 
     #   - hyperelliptic case
-    if card % 4 == 0:
+    if curve_order % 4 == 0:
         return p.nbits() * 5.0/3
 
     #   - non-hyperelliptic case
@@ -311,8 +315,8 @@ def degree_six_security(field, field_tower, p, E):
 
     # Decomp. on Jac_H(\mathbb{F}_{p^3}), g = 2
 
-    if card % 2 == 1 and True:  # no j-invariant check as we can always convert to Sholten
-        return p.nbits() * 12.0/7  # form with the current construction if card % 2 == 1
+    if curve_order % 2 == 1 and True:  # no j-invariant check as we can always convert to Sholten
+        return p.nbits() * 12.0/7  # form with the current construction if curve_order % 2 == 1
     elif E.two_torsion_rank() == 2:
         return p.nbits() * 12.0/7
 
@@ -362,16 +366,11 @@ Args:
         args) > 0 else 4719772409484279809  # 2^62 + 2^56 + 2^55 + 1
     extension_degree = int(args[1]) if len(args) > 1 else 6
     min_cofactor = 0
-    max_cofactor = 64
-    if small_order:
-        min_cofactor = 2 ^ ((prime ^ extension_degree).nbits() - 256)
-        max_cofactor = 2 ^ ((prime ^ extension_degree).nbits() - 250)
-    elif len(args) > 2:
-        max_cofactor = int(args[2])
+    max_cofactor = int(args[2]) if len(args) > 2 else 64
 
     if processes == 1:
         strategy(prime, extension_degree,
-                 min_cofactor, max_cofactor)
+                 min_cofactor, max_cofactor, small_order)
     else:
         print(f"Using {processes} processes.")
         pool = Pool(processes=processes)
@@ -379,7 +378,7 @@ Args:
         try:
             for wid in range(processes):
                 pool.apply_async(
-                    worker, (strategy, prime, extension_degree, min_cofactor, max_cofactor, wid, processes))
+                    worker, (strategy, prime, extension_degree, min_cofactor, max_cofactor, small_order, wid, processes))
 
             while True:
                 sleep(1000)
