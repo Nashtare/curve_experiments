@@ -293,7 +293,7 @@ def find_irreducible_poly(ring, degree, use_root=False, max_coeff=2, output_all=
                     # Exhaustive search usually becomes too heavy with this,
                     # hence stop as soon as one solution is found
                     if not output_all:
-                        return min(list_poly, key=lambda t: len(t.coefficients()))
+                        return [min(list_poly, key=lambda t: len(t.coefficients()))]
 
     if output_all or list_poly == []:
         return list_poly
