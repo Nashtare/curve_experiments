@@ -127,15 +127,14 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
         while True:
             if gen_y2.is_square():
                 g = E((gen_x, gen_y2.sqrt()))
-                g_ord = g.order()
-                if g_ord >= prime_order:
+                if cofactor * g != E(0,1,0): # ord(g) >= prime_order
                     sys.stdout.write("@")
                     sys.stdout.flush()
                     break
             gen_x += 1
             gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
 
-        if g_ord != prime_order:
+        if prime_order * g != E(0,1,0):
             g = cofactor * g
 
         (rho_sec, k) = curve_security(
