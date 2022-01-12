@@ -87,11 +87,14 @@ def h_weight(x):
 # CURVE SECURITY FUNCTIONS
 ####################################################
 
-def curve_security(p, q, main_factor=0):
+def curve_security(p, q, no_endo=False, main_factor=0):
     sys.stdout.write('!')
     sys.stdout.flush()
     r = main_factor if main_factor != 0 else factor(q)[-1][0]
-    return (log(PI_12 * r, 4), embedding_degree(p, r))
+    if no_endo:
+        return (log(PI_12 * 3 * r, 4), embedding_degree(p, r))
+    else:
+        return (log(PI_12 * r, 4), embedding_degree(p, r))
 
 
 def embedding_degree(p, r):
@@ -109,13 +112,16 @@ def embedding_degree(p, r):
     return Integer(d)
 
 
-def twist_security(p, q):
-    return curve_security(p, 2*(p+1) - q)
+def twist_security(p, q, no_endo=False):
+    return curve_security(p, 2*(p+1) - q, no_endo)
 
 
-def twist_security_ignore_embedding_degree(p, q):
+def twist_security_ignore_embedding_degree(p, q, no_endo=False):
     r = factor(2*(p+1) - q)[-1][0]
-    return log(PI_12 * r, 4)
+    if no_endo:
+        return log(PI_12 * 3 * r, 4)
+    else:
+        return log(PI_12 * r, 4)
 
 
 ####################################################

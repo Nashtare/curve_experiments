@@ -138,7 +138,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
             g = cofactor * g
 
         (rho_sec, k) = curve_security(
-            extension.cardinality(), n, prime_order)
+            extension.cardinality(), n, True, prime_order)
 
         if k.nbits() < MIN_EMBEDDING_DEGREE:
             continue
@@ -161,7 +161,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
             extension_sec = 0
 
         twist_rho_sec = twist_security_ignore_embedding_degree(
-            extension.cardinality(), n)
+            extension.cardinality(), n, True)
 
         if twist_rho_sec < TWIST_SECURITY:
             continue
