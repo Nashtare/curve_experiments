@@ -164,3 +164,14 @@ def repr_field_element_bytes(n, nb_bytes=32, output_hex=False):
         else:
             res.append(Integer("0x" + n[i*2:i*2+2]))
     return res
+
+
+def poly_weight(poly, p):
+    return sum(dist(t, p) for t in poly.coefficients())
+
+
+def dist(n, p):
+    if n > p//2:
+        return Integer(p-n)
+    else:
+        return Integer(n)

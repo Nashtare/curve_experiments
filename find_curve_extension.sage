@@ -7,7 +7,7 @@ from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import curve_security, twist_security_ignore_embedding_degree, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
+from util import curve_security, poly_weight, twist_security_ignore_embedding_degree, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -127,14 +127,14 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
         while True:
             if gen_y2.is_square():
                 g = E((gen_x, gen_y2.sqrt()))
-                if cofactor * g != E(0,1,0): # ord(g) >= prime_order
+                if cofactor * g != E(0, 1, 0):  # ord(g) >= prime_order
                     sys.stdout.write("@")
                     sys.stdout.flush()
                     break
             gen_x += 1
             gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
 
-        if prime_order * g != E(0,1,0):
+        if prime_order * g != E(0, 1, 0):
             g = cofactor * g
 
         (rho_sec, k) = curve_security(
@@ -194,12 +194,14 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
     for n in range(len(factors)):
         degree = factors[n][0]
         for i in range(factors[n][1]):  # multiplicity
-            poly_list = find_irreducible_poly(Fpx, degree)
+            poly_list = find_irreducible_poly(Fpx, degree, output_all=True)
             if poly_list == []:
-                poly_list = find_irreducible_poly(Fpx, degree, use_root=True)
+                poly_list = find_irreducible_poly(
+                    Fpx, degree, use_root=True, output_all=True)
                 if poly_list == []:
                     raise ValueError(
                         'Could not find an irreducible polynomial with specified parameters.')
+            poly_list.sort(key=lambda e: poly_weight(e, prime))
             poly = poly_list[0]  # extract the polynomial from the list
             Fp = Fp.extension(poly, f"u_{n}{i}")
             if wid == 0:
