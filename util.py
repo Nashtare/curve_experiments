@@ -90,7 +90,7 @@ def h_weight(x):
 def curve_security(p, q, no_endo=False, main_factor=0):
     sys.stdout.write('!')
     sys.stdout.flush()
-    r = main_factor if main_factor != 0 else factor(q)[-1][0]
+    r = main_factor if main_factor != 0 else ecm.factor(q)[-1][0]
     if no_endo:
         return (log(PI_12 * 3 * r, 4), embedding_degree(p, r))
     else:
