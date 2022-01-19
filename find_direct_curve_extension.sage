@@ -247,8 +247,9 @@ def degree_six_security(field, p, E, curve_order):
     Fp = Fp.extension(poly, "a2")
 
     field_bis, _, psi2 = make_finite_field(Fp)
-    assert(field_bis == field)
     psi1 = field.Hom(field_bis)[0]
+    assert(psi1.is_injective())
+    assert(psi1.is_surjective())
     psi = psi1.post_compose(psi2)
     a = E.a4()
     b = E.a6()
