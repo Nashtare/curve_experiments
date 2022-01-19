@@ -123,7 +123,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
         bin = BinaryStrings()
         gen_x_bin = bin.encoding("Topos")
         gen_x = extension(int(str(gen_x_bin), 2))
-        gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
+        gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
         while True:
             if gen_y2.is_square():
                 g = E((gen_x, gen_y2.sqrt()))
@@ -132,7 +132,7 @@ def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_ord
                     sys.stdout.flush()
                     break
             gen_x += 1
-            gen_y2 = (gen_x ^ 3 + gen_x + coeff_b)
+            gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
 
         if prime_order * g != E(0, 1, 0):
             g = cofactor * g
@@ -218,14 +218,15 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
     extension, _phi, psi = make_finite_field(Fp)
 
     for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security, twist_rho_security) in find_curve(extension, Fp, min_cofactor, max_cofactor, small_order, wid, processes):
+        coeff_a_prime = psi(coeff_a)
         coeff_b_prime = psi(coeff_b)
-        E_prime = EllipticCurve(Fp, [1, coeff_b_prime])
+        E_prime = EllipticCurve(Fp, [coeff_a_prime, coeff_b_prime])
         output = "\n\n\n"
         output += "# Curve with basefield seen as a direct extension\n"
-        output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + x + {coeff_b} (b == a^{index})\n"
+        output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + {coeff_a}x + {coeff_b} (b == a^{index})\n"
         output += f"\t\twith a = {extension.primitive_element()}\n"
         output += "# Curve with basefield seen as a towered extension\n"
-        output += f"E'(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + x + {coeff_b_prime}\n\n"
+        output += f"E'(GF(({Fp.base_ring().order().factor()})^{Fp.degree()})) : y^2 = x^3 + {coeff_a_prime}x + {coeff_b_prime}\n\n"
         output += f"E generator point: {g}\n"
         gx = g.xy()[0]
         gy = g.xy()[1]
