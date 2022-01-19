@@ -60,7 +60,7 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, proces
         coeff_a = 1
         string = PI_STRING[0:length]
         while len(string) < 19 * 6:
-            string = string + "0"
+            string = "0" + string
         coeff_b = extension([int(string[5*19:6*19]), int(string[4*19:5*19]), int(
             string[3*19:4*19]), int(string[2*19:3*19]), int(string[19:2*19]), int(string[0:19])])
 
