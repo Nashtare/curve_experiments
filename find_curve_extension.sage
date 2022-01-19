@@ -7,60 +7,10 @@ from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import curve_security, poly_weight, twist_security_ignore_embedding_degree, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
+from util import curve_security, poly_weight, twist_security_ignore_embedding_degree, make_finite_field, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
 
 if sys.version_info[0] == 2:
     range = xrange
-
-
-def make_finite_field(k):
-    r""" Return the finite field isomorphic to this field.
-
-    INPUT:
-
-    - ``k`` -- a finite field
-
-    OUTPUT: a tuple `(k_1,\phi,\xi)` where `k_1` is a 'true' finite field,
-    `\phi` is an isomorphism from `k` to `k_1` and `\xi` is an isomorphism
-    from `k_1` to `k`.
-
-    This function is useful when `k` is constructed as a tower of extensions
-    with a finite field as a base field.
-
-    Adapted from https://github.com/MCLF/mclf/issues/103.
-
-    """
-
-    assert k.is_field()
-    assert k.is_finite()
-    # TODO: partially solved sage9.4 issue but still failing for higher extensions (wrong isomorphic field)
-    if k.base_ring().is_prime_field():
-        return k, k.hom(k.gen(), k), k.hom(k.gen(), k)
-    else:
-        k0 = k.base_field()
-        G = k.modulus()
-        assert G.parent().base_ring() is k0
-        k0_new, phi0, _ = make_finite_field(k0)
-        G_new = G.map_coefficients(phi0, k0_new)
-        k_new = k0_new.extension(G_new.degree())
-
-        alpha = G_new.roots(k_new)[0][0]
-        Pk0 = k.cover_ring()
-        Pk0_new = k0_new[Pk0.variable_name()]
-        psi1 = Pk0.hom(phi0, Pk0_new)
-        psi2 = Pk0_new.hom(alpha, k_new)
-        psi = psi1.post_compose(psi2)
-        # psi: Pk0 --> k_new
-        phi = k.hom(Pk0.gen(), Pk0, check=False)
-        phi = phi.post_compose(psi)
-
-        k_inv = k0.base_ring()
-        phi0_inv = k_inv.hom(k_inv.gen(), k_inv)
-        G_new_inv = k_new.modulus().map_coefficients(phi0_inv, k0_new)
-        alpha_inv = G_new_inv.roots(k)[0][0]
-        phi_inv = k_new.hom(alpha_inv, k)
-
-        return k_new, phi, phi_inv
 
 
 def find_curve(extension, extension_tower, min_cofactor, max_cofactor, small_order, wid=0, processes=1):

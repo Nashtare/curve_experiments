@@ -7,7 +7,7 @@ from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import curve_security, poly_weight, twist_security_ignore_embedding_degree, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
+from util import curve_security, poly_weight, twist_security_ignore_embedding_degree, make_finite_field, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -237,14 +237,25 @@ def find_irreducible_poly(ring, degree, use_root=False, max_coeff=3, output_all=
 def degree_six_security(field, p, E, curve_order):
     assert field.order() == p ^ 6
 
-    # field_bis, _, psi = make_finite_field(field_tower)
+    # Construct a tower extension isomorphic to field
+    Fp = GF(p)
+    Fpx = Fp["x"]
+    poly = find_irreducible_poly(Fpx, 2)
+    Fp = Fp.extension(poly, "a1")
+    Fpx = Fp["x"]
+    poly = find_irreducible_poly(Fpx, 3)
+    Fp = Fp.extension(poly, "a2")
+
+    field_bis, _, psi2 = make_finite_field(Fp)
     assert(field_bis == field)
+    psi1 = field.Hom(field_bis)[0]
+    psi = psi1.post_compose(psi2)
     a = E.a4()
     b = E.a6()
 
-    # K = field_tower["x"]
-    # x = K.gen()
-    # curve_polynomial = K(x ^ 3 + psi(a)*x + psi(b))
+    K = Fp["x"]
+    x = K.gen()
+    curve_polynomial = K(x ^ 3 + psi(a)*x + psi(b))
 
     # Sieving/Decomp. on Jac_H(\mathbb{F}_{p^2}), g = 3
 
@@ -266,11 +277,11 @@ def degree_six_security(field, p, E, curve_order):
     # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
     # GHS method, with either Fp2 or Fp3 as basefield
-    # roots = curve_polynomial.roots(multiplicities=false)
-    # if roots != []:
-    #     for root in roots:
-    #         if (root ** (p**2) in roots) or (root ** (p**3) in roots):
-    #             return p.nbits() * 8.0/3
+    roots = curve_polynomial.roots(multiplicities=false)
+    if roots != []:
+        for root in roots:
+            if (root ** (p**2) in roots) or (root ** (p**3) in roots):
+                return p.nbits() * 8.0/3
 
     # Ind. calc. on Jac_H(\mathbb{F}_{p^2}), g = 3
     # Heavier cost than Weil descent attack, so discarded here
