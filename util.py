@@ -102,8 +102,8 @@ def embedding_degree(p, r):
     Z_q = Integers(r)
     u = Z_q(p)
     d = r-1
-    V = factor(d)
-    for (v, k) in V:
+    V = ecm.factor(d)
+    for v in V:
         while d % v == 0:
             if u**(d/v) != 1:
                 break
@@ -117,7 +117,7 @@ def twist_security(p, q, no_endo=False):
 
 
 def twist_security_ignore_embedding_degree(p, q, no_endo=False):
-    r = factor(2*(p+1) - q)[-1][0]
+    r = ecm.factor(2*(p+1) - q)[-1][0]
     if no_endo:
         return log(PI_12 * 3 * r, 4)
     else:
