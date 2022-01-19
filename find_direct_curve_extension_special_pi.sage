@@ -53,7 +53,7 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, proces
 
     a = extension.primitive_element()
     p = extension.base_ring().order()
-    for length in range(19 * 6):
+    for length in range(wid + 1, 19 * 6 + 1, processes):
         sys.stdout.write(".")
         sys.stdout.flush()
 
