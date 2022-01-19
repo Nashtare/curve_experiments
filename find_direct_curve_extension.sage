@@ -240,10 +240,10 @@ def degree_six_security(field, p, E, curve_order):
     # Construct a tower extension isomorphic to field
     Fp = GF(p)
     Fpx = Fp["x"]
-    poly = find_irreducible_poly(Fpx, 2)
+    poly = find_irreducible_poly(Fpx, 2, use_root=True)[0]
     Fp = Fp.extension(poly, "a1")
     Fpx = Fp["x"]
-    poly = find_irreducible_poly(Fpx, 3)
+    poly = find_irreducible_poly(Fpx, 3)[0]
     Fp = Fp.extension(poly, "a2")
 
     field_bis, _, psi2 = make_finite_field(Fp)
