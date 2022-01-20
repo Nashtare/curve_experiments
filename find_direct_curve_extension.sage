@@ -141,7 +141,7 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
     poly_list = find_irreducible_poly(Fpx, extension_degree, output_all=True)
     if poly_list == []:
         poly_list = find_irreducible_poly(
-            Fpx, degree, use_root=True, output_all=True)
+            Fpx, extension_degree, use_root=True, output_all=True)
     if poly_list == []:
         raise ValueError(
             'Could not find an irreducible polynomial with specified parameters.')
