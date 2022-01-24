@@ -53,81 +53,81 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, proces
 
     a = extension.primitive_element()
     p = extension.base_ring().order()
-    for length in range(wid + 1, 19 * 6 + 1, processes):
+    for length in range(wid + 18, 19 * 6 + 1, processes):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-        coeff_a = 1
-        string = PI_STRING[0:length]
-        while len(string) < 19 * 6:
-            string = "0" + string
-        coeff_b = extension([int(string[5*19:6*19]), int(string[4*19:5*19]), int(
-            string[3*19:4*19]), int(string[2*19:3*19]), int(string[19:2*19]), int(string[0:19])])
+        for coeff_a in range(-3, 4):
+            string = PI_STRING[0:length]
+            while len(string) < 19 * 6:
+                string = "0" + string
+            coeff_b = extension([int(string[5*19:6*19]), int(string[4*19:5*19]), int(
+                string[3*19:4*19]), int(string[2*19:3*19]), int(string[19:2*19]), int(string[0:19])])
 
-        E = EllipticCurve(extension, [coeff_a, coeff_b])
+            E = EllipticCurve(extension, [coeff_a, coeff_b])
 
-        n = E.count_points()
-        prime_order = list(ecm.factor(n))[-1]
-        cofactor = n // prime_order
-        if small_order:
-            if prime_order.nbits() < 252 or prime_order.nbits() > 255:
+            n = E.count_points()
+            prime_order = list(ecm.factor(n))[-1]
+            cofactor = n // prime_order
+            if small_order:
+                if prime_order.nbits() < 252 or prime_order.nbits() > 255:
+                    continue
+            elif cofactor < min_cofactor:
                 continue
-        elif cofactor < min_cofactor:
-            continue
-        elif cofactor > max_cofactor:
-            continue
+            elif cofactor > max_cofactor:
+                continue
 
-        sys.stdout.write("o")
-        sys.stdout.flush()
-
-        # TODO: use proper hash-to-curve algorithm
-        bin = BinaryStrings()
-        gen_x_bin = bin.encoding("Topos")
-        gen_x = extension(int(str(gen_x_bin), 2))
-        gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
-        while True:
-            if gen_y2.is_square():
-                g = E((gen_x, gen_y2.sqrt()))
-                if cofactor * g != E(0, 1, 0):  # ord(g) >= prime_order
-                    sys.stdout.write("@")
-                    sys.stdout.flush()
-                    break
-            gen_x += 1
-            gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
-
-        if prime_order * g != E(0, 1, 0):
-            g = cofactor * g
-
-        (rho_sec, k) = curve_security(
-            extension.cardinality(), n, True, prime_order)
-
-        if k.nbits() < MIN_EMBEDDING_DEGREE:
-            continue
-
-        sys.stdout.write("+")
-        sys.stdout.flush()
-
-        if rho_sec < RHO_SECURITY:
-            continue
-
-        if extension.degree() == 6:
-            sys.stdout.write("~")
+            sys.stdout.write("o")
             sys.stdout.flush()
 
-            extension_sec = degree_six_security(
-                extension, p, E, n)
-            if extension_sec < EXTENSION_SECURITY:
+            # TODO: use proper hash-to-curve algorithm
+            bin = BinaryStrings()
+            gen_x_bin = bin.encoding("Topos")
+            gen_x = extension(int(str(gen_x_bin), 2))
+            gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
+            while True:
+                if gen_y2.is_square():
+                    g = E((gen_x, gen_y2.sqrt()))
+                    if cofactor * g != E(0, 1, 0):  # ord(g) >= prime_order
+                        sys.stdout.write("@")
+                        sys.stdout.flush()
+                        break
+                gen_x += 1
+                gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
+
+            if prime_order * g != E(0, 1, 0):
+                g = cofactor * g
+
+            (rho_sec, k) = curve_security(
+                extension.cardinality(), n, True, prime_order)
+
+            if k.nbits() < MIN_EMBEDDING_DEGREE:
                 continue
-        else:
-            extension_sec = 0
 
-        twist_rho_sec = twist_security_ignore_embedding_degree(
-            extension.cardinality(), n, True)
+            sys.stdout.write("+")
+            sys.stdout.flush()
 
-        if twist_rho_sec < TWIST_SECURITY:
-            continue
+            if rho_sec < RHO_SECURITY:
+                continue
 
-        yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_sec, twist_rho_sec)
+            if extension.degree() == 6:
+                sys.stdout.write("~")
+                sys.stdout.flush()
+
+                extension_sec = degree_six_security(
+                    extension, p, E, n)
+                if extension_sec < EXTENSION_SECURITY:
+                    continue
+            else:
+                extension_sec = 0
+
+            twist_rho_sec = twist_security_ignore_embedding_degree(
+                extension.cardinality(), n, True)
+
+            if twist_rho_sec < TWIST_SECURITY:
+                continue
+
+            yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_sec, twist_rho_sec)
 
 
 def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
