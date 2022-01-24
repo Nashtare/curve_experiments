@@ -225,3 +225,95 @@ def dist(n, p):
         return Integer(p-n)
     else:
         return Integer(n)
+
+
+def find_sparse_irreducible_poly(ring, degree, use_root=False, max_coeff=10):
+    r"""Return an irreducible polynomial of the form X^k - j with smallest j
+    in absolute value below max_coeff if any, or 0.
+
+    INPUT:
+
+    - ``ring`` -- a polynomial ring
+    - ``degree`` -- the degree of the irreducible polynomial
+    - ``use_root`` -- boolean indicating whether using only the ring base field elements as coefficients
+                      or using also an element not belonging to the base field (default False)
+    - ``max_coeff`` -- maximum absolute value for polynomial coefficients
+
+    OUTPUT: an irreducible polynomial of the form X^k - j with smallest j
+    in absolute value below max_coeff if any, or 0.
+
+    """
+
+    x = ring.gen()
+
+    for j in range(1, max_coeff + 1):
+        poly = x ** degree - j
+        if poly.is_irreducible():
+            return poly
+
+    if use_root:
+        root = ring.base().gen()
+        for j in range(1, max_coeff + 1):
+            poly = x ** degree - root*j
+            if poly.is_irreducible():
+                return poly
+
+    return 0
+
+
+def find_irreducible_poly(ring, degree, use_root=False, max_coeff=3, output_all=False):
+    r"""Return a list of irreducible polynomials with small and few coefficients.
+
+    INPUT:
+
+    - ``ring`` -- a polynomial ring
+    - ``degree`` -- the degree of the irreducible polynomial
+    - ``use_root`` -- boolean indicating whether using only the ring base field elements as coefficients
+                      or using also an element not belonging to the base field (default False)
+    - ``max_coeff`` -- maximum absolute value for polynomial coefficients
+    - ``output_all`` -- boolean indicating whether outputting only one polynomial or all (default False)
+
+    OUTPUT: a list of irreducible polynomials.
+
+    The default behaviour, to return a single polynomial, still outputs a list of length 1 to keep the
+    function output consistent when `output_all == True`.
+
+    """
+
+    x = ring.gen()
+
+    set_coeffs_1 = set(combinations_with_replacement(
+        range(-max_coeff, max_coeff), degree))
+    set_coeffs_2 = set(combinations_with_replacement(
+        reversed(range(-max_coeff, max_coeff)), degree))
+    set_coeffs = set_coeffs_1.union(set_coeffs_2)
+
+    list_poly = []
+    for coeffs in set_coeffs:
+        p = x ** degree
+        for n in range(len(coeffs)):
+            p += coeffs[n]*x ** n
+        if p.is_irreducible():
+            list_poly.append(p)
+
+    if use_root:
+        root = ring.base().gen()
+        for regular_coeffs in set_coeffs:
+            p = x ** degree
+            for n in range(len(regular_coeffs)):
+                p += regular_coeffs[n]*x ** n
+            for special_coeffs in set_coeffs:
+                q = p
+                for n in range(len(special_coeffs)):
+                    q += root * special_coeffs[n]*x ** n
+                if q.is_irreducible():
+                    list_poly.append(q)
+                    # Exhaustive search usually becomes too heavy with this,
+                    # hence stop as soon as one solution is found
+                    if not output_all:
+                        return [min(list_poly, key=lambda t: len(t.coefficients()))]
+
+    if output_all or list_poly == []:
+        return list_poly
+    else:
+        return [min(list_poly, key=lambda t: len(t.coefficients()))]

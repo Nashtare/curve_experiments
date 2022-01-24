@@ -7,7 +7,7 @@ from multiprocessing import cpu_count, Pool
 from traceback import print_exc
 from itertools import combinations_with_replacement
 
-from util import curve_security, poly_weight, twist_security_ignore_embedding_degree, make_finite_field, MIN_EMBEDDING_DEGREE, RHO_SECURITY, EXTENSION_SECURITY, TWIST_SECURITY
+from util import *
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -138,15 +138,18 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
     if wid == 0:
         info = f"\n{Fp}.\n"
     Fpx = Fp['x']
-    poly_list = find_irreducible_poly(Fpx, extension_degree, output_all=True)
-    if poly_list == []:
+    poly = find_sparse_irreducible_poly(Fpx, extension_degree, use_root=True)
+    if poly == 0:
         poly_list = find_irreducible_poly(
-            Fpx, extension_degree, use_root=True, output_all=True)
-    if poly_list == []:
-        raise ValueError(
-            'Could not find an irreducible polynomial with specified parameters.')
-    poly_list.sort(key=lambda e: poly_weight(e, prime))
-    poly = poly_list[0]  # extract the polynomial from the list
+            Fpx, extension_degree, output_all=True)
+        if poly_list == []:
+            poly_list = find_irreducible_poly(
+                Fpx, extension_degree, use_root=True, output_all=True)
+        if poly_list == []:
+            raise ValueError(
+                'Could not find an irreducible polynomial with specified parameters.')
+        poly_list.sort(key=lambda e: poly_weight(e, prime))
+        poly = poly_list[0]  # extract the polynomial from the list
     Fp = Fp.extension(poly, "u")
     if wid == 0:
         info += f"Modulus: {poly}.\n"
