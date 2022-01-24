@@ -117,6 +117,8 @@ def twist_security(p, q, no_endo=False):
 
 
 def twist_security_ignore_embedding_degree(p, q, no_endo=False):
+    sys.stdout.write('^')
+    sys.stdout.flush()
     r = ecm.factor(2*(p+1) - q)[-1]
     if no_endo:
         return log(PI_12 * 3 * r, 4)
