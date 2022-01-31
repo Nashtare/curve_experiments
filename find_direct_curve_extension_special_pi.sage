@@ -8,6 +8,7 @@ from traceback import print_exc
 from itertools import combinations_with_replacement
 
 from util import *
+from util_hashtocurve import OptimizedSSWU
 
 if sys.version_info[0] == 2:
     range = xrange
@@ -21,7 +22,7 @@ B0 = "1706798214808651328"
 PI_STRING = "314159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328"
 
 
-def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
+def find_curve(extension, min_cofactor, max_cofactor, small_order, sswu_string, wid=0, processes=1):
     r"""Yield curve constructed over a prime field extension.
 
     INPUT:
@@ -31,6 +32,7 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, proces
     - ``max_cofactor`` -- the maximum cofactor for the curve order
     - ``small_order`` -- boolean indicating whether to look for small orders (252/255 bits).
             Overrides `min_cofactor` and `max_cofactor` if set to `True`.
+    - ``sswu_string`` -- the string to be used when generating the subgroup basepoint with SSWU hash-to-curve
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
 
@@ -80,20 +82,13 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, proces
             sys.stdout.write("o")
             sys.stdout.flush()
 
-            # TODO: use proper hash-to-curve algorithm
+            # We generate a point on the curve with the SSWU hash-to-curve algorithm.
+            # If the point is not in the prime-order subgroup, we multiply it by the cofactor.
+            curve_sswu = OptimizedSSWU(extension, coeff_a, coeff_b)
             bin = BinaryStrings()
-            gen_x_bin = bin.encoding("Topos")
-            gen_x = extension(int(str(gen_x_bin), 2))
-            gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
-            while True:
-                if gen_y2.is_square():
-                    g = E((gen_x, gen_y2.sqrt()))
-                    if cofactor * g != E(0, 1, 0):  # ord(g) >= prime_order
-                        sys.stdout.write("@")
-                        sys.stdout.flush()
-                        break
-                gen_x += 1
-                gen_y2 = (gen_x ^ 3 + coeff_a * gen_x + coeff_b)
+            sswu_bin_encoding = bin.encoding(sswu_string)
+            sswu_int = extension(int(str(sswu_bin_encoding), 2))
+            g = curve_sswu.map_to_curve(sswu_int)
 
             if prime_order * g != E(0, 1, 0):
                 g = cofactor * g
@@ -130,7 +125,7 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, wid=0, proces
             yield (extension, E, g, prime_order, cofactor, i, coeff_a, coeff_b, rho_sec, k, extension_sec, twist_rho_sec)
 
 
-def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order, wid=0, processes=1):
+def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order, sswu_string, wid=0, processes=1):
     r"""Print parameters of curves defined over a prime field extension
 
     INPUT:
@@ -141,6 +136,7 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
     - ``max_cofactor`` -- the maximum cofactor for the curve order
     - ``small_order`` -- boolean indicating whether to look for small orders (252/255 bits).
             Overrides `min_cofactor` and `max_cofactor` if set to `True`.
+    - ``sswu_string`` -- the string to be used when generating the subgroup basepoint with SSWU hash-to-curve
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
 
@@ -173,11 +169,11 @@ def print_curve(prime, extension_degree, min_cofactor, max_cofactor, small_order
             info += f"Looking for curves with max cofactor: {max_cofactor}.\n"
         print(info)
 
-    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security, twist_rho_security) in find_curve(Fp, min_cofactor, max_cofactor, small_order, wid, processes):
+    for (extension, E, g, order, cofactor, index, coeff_a, coeff_b, rho_security, embedding_degree, extension_security, twist_rho_security) in find_curve(Fp, min_cofactor, max_cofactor, small_order, sswu_string, wid, processes):
         output = "\n\n\n"
         output += f"E(GF(({extension.base_ring().order().factor()})^{extension.degree()})) : y^2 = x^3 + {coeff_a}x + {coeff_b} (b == a^{index})\n"
         output += f"\t\twith a = {extension.primitive_element()}\n"
-        output += f"E generator point: {g}\n"
+        output += f"E generator point (from SSWU on '{sswu_string}'): {g}\n"
         output += f"Curve prime order: {order} ({order.nbits()} bits)\n"
         output += f"Curve cofactor: {cofactor}"
         if cofactor > 4:
@@ -293,7 +289,7 @@ def degree_six_security(field, p, E, curve_order):
     # More than 2^128 operations: see https://eprint.iacr.org/2014/346.pdf
 
     # GHS method, with either Fp2 or Fp3 as basefield
-    roots = curve_polynomial.roots(multiplicities=false)
+    roots = curve_polynomial.roots(multiplicities=False)
     if roots != []:
         for root in roots:
             if (root ** (p**2) in roots) or (root ** (p**3) in roots):
@@ -320,7 +316,7 @@ def main():
 
     if help:
         print("""
-Cmd: sage find_curve_extension.sage [--sequential] [--small-order] <prime> <extension_degree> <max_cofactor>
+Cmd: sage find_direct_curve_extension_special_pi.sage [--sequential] [--small-order] <prime> <extension_degree> <max_cofactor> <sswu_string>
 
 Args:
     --sequential        Uses only one process
@@ -328,6 +324,7 @@ Args:
     <prime>             A prime number, default 2^62 + 2^56 + 2^55 + 1
     <extension_degree>  The extension degree of the prime field, default 6
     <max_cofactor>      Maximum cofactor of the curve, default 64
+    <sswu_string>       The string to be passed to the SSWU map to curve algorithm
 """)
         return
 
@@ -336,10 +333,11 @@ Args:
     extension_degree = int(args[1]) if len(args) > 1 else 6
     min_cofactor = 0
     max_cofactor = int(args[2]) if len(args) > 2 else 64
+    sswu_string = str(args[3]) if len(args) > 3 else "Cheetah"
 
     if processes == 1:
         strategy(prime, extension_degree,
-                 min_cofactor, max_cofactor, small_order)
+                 min_cofactor, max_cofactor, small_order, sswu_string)
     else:
         print(f"Using {processes} processes.")
         pool = Pool(processes=processes)
@@ -347,7 +345,7 @@ Args:
         try:
             for wid in range(processes):
                 pool.apply_async(
-                    worker, (strategy, prime, extension_degree, min_cofactor, max_cofactor, small_order, wid, processes))
+                    worker, (strategy, prime, extension_degree, min_cofactor, max_cofactor, small_order, sswu_string, wid, processes))
 
             while True:
                 sleep(1000)
