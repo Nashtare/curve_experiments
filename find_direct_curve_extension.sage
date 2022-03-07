@@ -45,14 +45,14 @@ def find_curve(extension, min_cofactor, max_cofactor, small_order, sswu_string, 
 
     """
 
-    a = extension.primitive_element()
+    a = extension.gen()
     p = extension.base_ring().order()
     for i in range(wid + 1, 1000000000, processes):
         sys.stdout.write(".")
         sys.stdout.flush()
 
         coeff_a = 1
-        coeff_b = a**i
+        coeff_b = a * i
 
         E = EllipticCurve(extension, [coeff_a, coeff_b])
 
