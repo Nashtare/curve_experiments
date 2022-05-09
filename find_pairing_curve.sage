@@ -12,7 +12,7 @@ if sys.version_info[0] == 2:
     range = xrange
 
 
-def find_curve(p, m=6, wid=0, processes=1):
+def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
     q = Integer(p ** m)
     R = Integers(q)
 
@@ -49,20 +49,19 @@ def find_curve(p, m=6, wid=0, processes=1):
 
         t, y = b, c
 
-        for k in (3, 4, 5, 6, 8, 10, 12):
-            sys.stdout.write("o")
-            sys.stdout.flush()
-            phi = cyclotomic_polynomial(k)(t-1)
-            if phi.is_prime():
-                r = phi
-            else:
-                r = ecm.factor(phi)[-1]
-            if (q + 1 - t) % ZZ(r) == 0:
-                yield(p, q, m, t, r, k)
+        sys.stdout.write("o")
+        sys.stdout.flush()
+        phi = cyclotomic_polynomial(embedding_degree)(t-1)
+        if phi.is_prime():
+            r = phi
+        else:
+            r = ecm.factor(phi)[-1]
+        if (q + 1 - t) % ZZ(r) == 0:
+            yield(p, q, m, t, r, embedding_degree)
 
 
-def print_curve(prime, m=6, wid=0, processes=1):
-    for (p, q, m, t, r, k) in find_curve(prime, m, wid, processes):
+def print_curve(prime, m=6, embedding_degree=12, wid=0, processes=1):
+    for (p, q, m, t, r, k) in find_curve(prime, m, embedding_degree, wid, processes):
         output = "\n\n\n"
         output += f"p = {p}\n"
         output += f"q = p^{m}\n"
@@ -85,7 +84,7 @@ def main():
 
     if help:
         print("""
-Cmd: sage find_pairing_curve.sage [--sequential] <prime> <extension_degree>
+Cmd: sage find_pairing_curve.sage [--sequential] <prime> <extension_degree> <embedding_degree>
 
 """)
         return
@@ -93,6 +92,7 @@ Cmd: sage find_pairing_curve.sage [--sequential] <prime> <extension_degree>
     prime = int(args[0]) if len(
         args) > 0 else 18446744069414584321
     extension_degree = int(args[1]) if len(args) > 1 else 6
+    embedding_degree = int(args[1]) if len(args) > 1 else 12
 
     if processes == 1:
         strategy(prime, extension_degree)
@@ -103,7 +103,7 @@ Cmd: sage find_pairing_curve.sage [--sequential] <prime> <extension_degree>
         try:
             for wid in range(processes):
                 pool.apply_async(
-                    worker, (strategy, prime, extension_degree, wid, processes))
+                    worker, (strategy, prime, extension_degree, embedding_degree, wid, processes))
 
             while True:
                 sleep(1000)
