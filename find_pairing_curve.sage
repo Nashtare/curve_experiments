@@ -16,10 +16,7 @@ def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
     q = Integer(p ** m)
     R = Integers(q)
 
-    for D in range(-3 - wid, -300, -processes):
-        sys.stdout.write(".")
-        sys.stdout.flush()
-
+    for D in range(-3 - wid, -1000000000, -processes):
         if -D >= 4*q:
             break
         if (D % 4 == 2) or (D % 4 == 3):
@@ -49,7 +46,7 @@ def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
 
         t, y = b, c
 
-        sys.stdout.write("o")
+        sys.stdout.write(".")
         sys.stdout.flush()
         phi = cyclotomic_polynomial(embedding_degree)(t-1)
         if phi.is_prime():
