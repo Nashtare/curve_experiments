@@ -16,7 +16,7 @@ def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
     q = Integer(p ** m)
     R = Integers(q)
 
-    for D in range(-3 - wid, -1000000000, -processes):
+    for D in range(-3 - wid, -1000000000, -2*processes):
         if -D >= 4*q:
             break
         if (D % 4 == 2) or (D % 4 == 3):
@@ -97,8 +97,15 @@ Cmd: sage find_pairing_curve.sage [--sequential] <prime> <extension_degree> <emb
         print(f"Using {processes} processes.")
         pool = Pool(processes=processes)
 
+        # Simpler to manage for 2n parallel jobs
+        assert(processes % 2 == 0)
+        wid_list = [0, 1]
+        for i in range((processes // 2) - 1):
+            wid_list.append(wid_list[2*i] + 4)
+            wid_list.append(wid_list[2*i + 1] + 4)
+
         try:
-            for wid in range(processes):
+            for wid in wid_list:
                 pool.apply_async(
                     worker, (strategy, prime, extension_degree, embedding_degree, wid, processes))
 
