@@ -48,9 +48,6 @@ def find_curve(extension, wid=0, processes=1):
         d = - (coeff_a - 2) / (coeff_a + 2)
         if d.is_square():
             continue
-        # Required for Ristretto encoding, (ad - 1)^2 == (a - d)^2 for a == -1
-        if not (a*d - 1).is_square():
-            continue
 
         sys.stdout.write(".")
         sys.stdout.flush()
@@ -61,6 +58,10 @@ def find_curve(extension, wid=0, processes=1):
         prime_order = list(ecm.factor(n))[-1]
         cofactor = n // prime_order
         if cofactor != 4 or cofactor != 8:
+            continue
+
+        # Required for Ristretto encoding, (ad - 1)^2 == (a - d)^2 for a == -1
+        if cofactor == 8 and not (a*d - 1).is_square():
             continue
 
         sys.stdout.write("o")
