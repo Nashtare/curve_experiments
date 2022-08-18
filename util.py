@@ -196,7 +196,7 @@ def repr_field_element(n, nb_hex=64, output_hex=True):
 
 
 def pretty_element_repr(n, nb_hex=64, output_hex=True):
-    num_list = repr_field_element(n)
+    num_list = repr_field_element(n, nb_hex, output_hex)
     res = "\n[\n"
     for i in num_list:
         res += "    %s,\n" % i

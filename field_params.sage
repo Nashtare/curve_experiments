@@ -2,6 +2,7 @@
 This module aims at providing finite field parameters for Arkworks algebra/ff library.
 """
 
+from dataclasses import field
 import sys
 
 from util import twoadicity, pretty_element_repr
@@ -23,25 +24,26 @@ def params(p):
     """
 
     F = GF(p)
+    field_size_hex = (p.nbits() + 4 - (p.nbits() % 4)) / 4
     output = f"\n\n\nParameters for GF({p}) arithmetic construction:\n"
     output += f"\n\nTWO_ADICITY: {twoadicity(p)}"
-    r = F(2**256)
-    r_squared = F(2**512)
-    s = 2 ^ twoadicity(p)
+    r = F(2)**(field_size_hex * 4)
+    r_squared = r ** 2
+    s = 2 ** twoadicity(p)
     t = (p-1) / s
     g = F.multiplicative_generator()
     root_unity = g ^ t
     output += f"\n\nTWO_ADIC ROOT UNITY: {pretty_element_repr(root_unity * r)}"
-    output += f"\n\nMODULUS: {pretty_element_repr(p)}"
-    output += f"\n\nR: {pretty_element_repr(r)}"
-    output += f"\n\nR^2: {pretty_element_repr(r_squared)}"
-    output += f"\n\nMODULUS_MINUS_ONE_DIV_TWO (unformatted): {pretty_element_repr((p-1)/2)}"
+    output += f"\n\nMODULUS: {pretty_element_repr(p, field_size_hex)}"
+    output += f"\n\nR: {pretty_element_repr(r, field_size_hex)}"
+    output += f"\n\nR^2: {pretty_element_repr(r_squared, field_size_hex)}"
+    output += f"\n\nMODULUS_MINUS_ONE_DIV_TWO (unformatted): {pretty_element_repr((p-1)/2, field_size_hex)}"
     output += f"\n\nT (unformatted): {repr(t)}"
-    output += f"\n\nT_MINUS_ONE_DIV_TWO (unformatted): {pretty_element_repr((t-1)/2)}"
-    output += f"\n\nGENERATOR: {pretty_element_repr(g * r)}"
+    output += f"\n\nT_MINUS_ONE_DIV_TWO (unformatted): {pretty_element_repr((t-1)/2, field_size_hex)}"
+    output += f"\n\nGENERATOR: {pretty_element_repr(g * r, field_size_hex)}"
     output += f"\n\nMODULUS_BITS: {p.nbits()}"
     output += f"\n\nCAPACITY: {p.nbits() - 1}"
-    output += f"\n\nREPR SHAVE BITS: {256 - p.nbits()}"
+    output += f"\n\nREPR SHAVE BITS: {2**(p.nbits() - 1).nbits() - p.nbits()}"
     output += f"\n\nINV: {(-(p ^ (-1)) % 2 ^ 64)}"
     print(output)
 
