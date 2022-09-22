@@ -14,9 +14,9 @@ if sys.version_info[0] == 2:
 
 def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
     q = Integer(p ** m)
-    R = Integers(q)
+    Rq = Integers(q)
 
-    for D in range(-3 - wid, -1000000000, -2*processes):
+    for D in range(-3 - wid, -1000000000, -processes):
         if -D >= 4*q:
             break
         if (D % 4 == 2) or (D % 4 == 3):
@@ -27,8 +27,8 @@ def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
         if h == -1:
             continue
 
-        v = R(D).sqrt()
-        if v not in R:
+        v = Rq(D).sqrt()
+        if v not in Rq:
             continue
         if (ZZ(v) % 2 != ZZ(D) % 2):
             v = q - v
@@ -41,7 +41,7 @@ def find_curve(p, m=6, embedding_degree=12, wid=0, processes=1):
             a, b = b, a % b
 
         c = (4*q - b ** 2) // abs(D)
-        if ((4*q - b**2) % abs(D) != 0) or R(c).sqrt() not in R:
+        if ((4*q - b**2) % abs(D) != 0) or Rq(c).sqrt() not in Rq:
             continue
 
         t, y = b, c
