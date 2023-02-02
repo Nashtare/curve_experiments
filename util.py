@@ -10,7 +10,7 @@ COEFFICIENT_RANGE = range(2, 20)
 RHO_SECURITY = 125
 EXTENSION_SECURITY = 120
 TWIST_SECURITY = 100
-MIN_EMBEDDING_DEGREE = 200
+MIN_EMBEDDING_DEGREE = 200 # number of bits
 # For Pollard-Rho security analysis
 PI_12 = (pi/12).numerical_approx()
 
