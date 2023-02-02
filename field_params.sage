@@ -24,7 +24,8 @@ def params(p):
     """
 
     F = GF(p)
-    field_size_hex = (p.nbits() + 4 - (p.nbits() % 4)) / 4
+    field_size_hex = p.nbits() if (p.nbits() % 4 == 0) else (
+        (p.nbits() + 4 - (p.nbits() % 4)) / 4)
     output = f"\n\n\nParameters for GF({p}) arithmetic construction:\n"
     output += f"\n\nTWO_ADICITY: {twoadicity(p)}"
     r = F(2)**(field_size_hex * 4)
@@ -33,7 +34,7 @@ def params(p):
     t = (p-1) / s
     g = F.multiplicative_generator()
     root_unity = g ^ t
-    output += f"\n\nTWO_ADIC ROOT UNITY: {pretty_element_repr(root_unity * r)}"
+    output += f"\n\nTWO_ADIC ROOT UNITY: {pretty_element_repr(root_unity * r, field_size_hex)}"
     output += f"\n\nMODULUS: {pretty_element_repr(p, field_size_hex)}"
     output += f"\n\nR: {pretty_element_repr(r, field_size_hex)}"
     output += f"\n\nR^2: {pretty_element_repr(r_squared, field_size_hex)}"
