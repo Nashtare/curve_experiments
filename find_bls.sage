@@ -19,6 +19,7 @@ def find_BLS12_curve(
         weight_start=2,
         weight_end=8,
         conservative=False,
+        construct_curve=False,
         wid=0,
         processes=1,
         extended=False,
@@ -32,6 +33,7 @@ def find_BLS12_curve(
     - ``weight_end`` -- maximum Hamming weight for generator `x` (default 8)
     - ``conservative`` -- boolean indicating whether selecting
                           conservative parameters or not (default False)
+    - ``construct_curve`` -- boolean indicating whether we should build valid curves
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
     - ``extended`` -- boolean indicating whether to use negative powers
@@ -70,7 +72,7 @@ def find_BLS12_curve(
         output = f"Weight {weight+1}\n"
         total = len(wx_list) * len(signed_wx_list)
         output += f"\tTotal cases: {total}\n"
-        (output_list, count) = generate_fields(limit, extended,
+        (output_list, count) = generate_fields(limit, extended, construct_curve,
                                                wx_list, signed_wx_list, bls12_scalar, bls12_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
@@ -83,6 +85,7 @@ def find_BLS24_curve(
         weight_start=2,
         weight_end=8,
         _conservative=False,
+        construct_curve=False,
         wid=0,
         processes=1,
         extended=False,
@@ -96,6 +99,7 @@ def find_BLS24_curve(
     - ``weight_end`` -- maximum Hamming weight for generator `x` (default 8)
     - ``conservative`` -- boolean indicating whether selecting
                           conservative parameters or not (default False)
+    - ``construct_curve`` -- boolean indicating whether we should build valid curves
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
     - ``extended`` -- boolean indicating whether to use negative powers
@@ -128,7 +132,7 @@ def find_BLS24_curve(
         output = f"Weight {weight+1}\n"
         total = len(wx_list) * len(signed_wx_list)
         output += f"\tTotal cases: {total}\n"
-        (output_list, count) = generate_fields(limit, extended,
+        (output_list, count) = generate_fields(limit, extended, construct_curve,
                                                wx_list, signed_wx_list, bls24_scalar, bls24_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
@@ -141,6 +145,7 @@ def find_BLS48_curve(
         weight_start=2,
         weight_end=8,
         _conservative=False,
+        construct_curve=False,
         wid=0,
         processes=1,
         extended=False,
@@ -154,6 +159,7 @@ def find_BLS48_curve(
     - ``weight_end`` -- maximum Hamming weight for generator `x` (default 8)
     - ``conservative`` -- boolean indicating whether selecting
                           conservative parameters or not (default False)
+    - ``construct_curve`` -- boolean indicating whether we should build valid curves
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
     - ``extended`` -- boolean indicating whether to use negative powers
@@ -185,7 +191,7 @@ def find_BLS48_curve(
         output = f"Weight {weight+1}\n"
         total = len(wx_list) * len(signed_wx_list)
         output += f"\tTotal cases: {total}\n"
-        (output_list, count) = generate_fields(limit, extended,
+        (output_list, count) = generate_fields(limit, extended, construct_curve,
                                                wx_list, signed_wx_list, bls48_scalar, bls48_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
@@ -193,7 +199,7 @@ def find_BLS48_curve(
     return output_list
 
 
-def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_func, base_func):
+def generate_fields(limit, extended, construct_curve, weight_list, signed_weight_list, scalar_func, base_func):
     """Helper function for blsN search functions"""
     count = 0
     output_list = []
@@ -221,20 +227,40 @@ def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_fun
                     else:
                         bin_x += f" - 2^{item[i]}"
                 if p.is_prime():
+                    L = [x]
                     if extended:
-                        output_list.append(
-                            [x, len(item) + 1, bin_x, adicity])
+                        L.append(len(item) + 1)
                     else:
-                        output_list.append([x, w, bin_x, adicity])
+                        L.append(w)
+                    L.append(bin_x)
+                    L.append(adicity)
+                    if construct_curve:
+                        coeff_b = 1
+                        E = EllipticCurve(GF(p), [0, coeff_b])
+                        while E.order() % r != 0:
+                            coeff_b += 1
+                            E = EllipticCurve(GF(p), [0, coeff_b])
+                        L.append(coeff_b)
+                    output_list.append(L)
                     count += 1
                 p = base_func(-x, r)
                 if p.is_prime():
                     bin_x = "-(" + bin_x + ")"
+                    L = [-x]
                     if extended:
-                        output_list.append(
-                            [-x, len(item) + 1, bin_x, adicity])
+                        L.append(len(item) + 1)
                     else:
-                        output_list.append([-x, w, bin_x, adicity])
+                        L.append(w)
+                    L.append(bin_x)
+                    L.append(adicity)
+                    if construct_curve:
+                        coeff_b = 1
+                        E = EllipticCurve(GF(p), [0, coeff_b])
+                        while E.order() % r != 0:
+                            coeff_b += 1
+                            E = EllipticCurve(GF(p), [0, coeff_b])
+                        L.append(coeff_b)
+                    output_list.append(L)
                     count += 1
     return (output_list, count)
 
@@ -252,12 +278,14 @@ def main():
     sortadicity = "--sort_adicity" in args
     silent = "--silent" in args
     save = "--save" in args
+    construct_curve = "--construct_curve" in args
     help = "--help" in args
     args = [arg for arg in args if not arg.startswith("--")]
 
     if len(args) < 1 or help:
         print("""
-Cmd: sage find_bls.sage [--sequential] [--conservative] [--sort_adicity] [--silent] [--save] [--bls24] [--bls48]
+Cmd: sage find_bls.sage [--sequential] [--conservative] [--sort_adicity] [--silent]
+                        [--save] [--bls24] [--bls48] [--construct_curve]
                           <min-2adicity> [<min-weight> [<max-weight>]]
 
 Args:
@@ -269,6 +297,7 @@ Args:
     --sort_adicity      Sorts results by decreasing 2-adicity rather than increasing Hamming weight
     --silent            Ignores stats at each search step
     --save              Saves list into csv file
+    --construct_curve   Finds coefficient B to build the corresponding curve y^2 = x^3 + B.
     <min-2adicity>      Minimum two-adicity of the scalar field of BLS
     <min-weight>        Minimum Hamming weight to start lookup
     <max-weight>        Maximum Hamming weight to end lookup
@@ -295,7 +324,7 @@ Args:
 
         for wid in range(processes):
             pool.apply_async(worker, (strategy, adicity, min_weight, max_weight, conservative,
-                             wid, processes, extended, not silent), callback=collect_result)
+                             construct_curve, wid, processes, extended, not silent), callback=collect_result)
 
         pool.close()
         pool.join()
