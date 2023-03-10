@@ -1,0 +1,17 @@
+# BLS12, regular size
+x = -9439544818968559616
+x = -(2^63 + 2^57 + 2^56)
+hw(x) = 3
+bitsize(q) = 377
+bitsize(r) = 253
+2adicity(r) = 112
+coeff_b = 4
+
+# BLS12, conservative size
+x = -18889468192074487562240
+x = -(2^74 + 2^51 + 2^43)
+hw(x) = 3
+bitsize(q) = 443
+bitsize(r) = 297
+2adicity(r) = 86
+coeff_b = 6
