@@ -22,7 +22,6 @@ def find_BLS12_curve(
         construct_curve=False,
         wid=0,
         processes=1,
-        extended=False,
         verbose=True):
     """Return parameters of valid BLS12 curves
 
@@ -36,13 +35,11 @@ def find_BLS12_curve(
     - ``construct_curve`` -- boolean indicating whether we should build valid curves
     - ``wid`` -- current job id (default 0)
     - ``processes`` -- number of concurrent jobs (default 1)
-    - ``extended`` -- boolean indicating whether to use negative powers
-                      of two in addition to the binary one (default False)
     - ``verbose`` -- boolean for more verbose outputs (default True)
 
     OUTPUT: a list of tuples `(x, w, repr, a)` where `x` is the generator of the BLS fields,
-    `w` is the Hamming weight of `x`, repr is x representation in either regular or extended form
-    and `a` is the adicity of the scalar field of the BLS.
+    `w` is the Hamming weight of `x`, repr is x representation in regular form and `a` is
+    the adicity of the scalar field of the BLS.
 
     Non-conservative parameters will yield base field primes at around 384 bits,
     and conservative ones will yield base field primes at 448 bits.
@@ -61,19 +58,11 @@ def find_BLS12_curve(
     for weight in range(weight_start-1 + wid, weight_end, processes):
         count = 0
         wx_list = list(combinations(range(adicity, limit), weight))
-        if extended:
-            signed_wx_set_1 = set(
-                combinations_with_replacement(range(0, 2), weight))
-            signed_wx_set_2 = set(combinations_with_replacement(
-                reversed(range(0, 2)), weight))
-            signed_wx_list = list(signed_wx_set_1.union(signed_wx_set_2))
-        else:
-            signed_wx_list = [[0 for i in range(weight)]]
         output = f"Weight {weight+1}\n"
-        total = len(wx_list) * len(signed_wx_list)
+        total = len(wx_list)
         output += f"\tTotal cases: {total}\n"
-        (output_list, count) = generate_fields(limit, extended, construct_curve,
-                                               wx_list, signed_wx_list, bls12_scalar, bls12_base)
+        (output_list, count) = generate_fields(limit, construct_curve,
+                                               wx_list, bls12_scalar, bls12_base)
         output += f"\tValid cases: {count} ({round(1.0 * count / total, 4)} %)\n"
         if verbose:
             print(output)
@@ -199,69 +188,56 @@ def find_BLS48_curve(
     return output_list
 
 
-def generate_fields(limit, extended, construct_curve, weight_list, signed_weight_list, scalar_func, base_func):
+def generate_fields(limit, construct_curve, weight_list, scalar_func, base_func):
     """Helper function for blsN search functions"""
     count = 0
     output_list = []
     for item in weight_list:
-        for sign in signed_weight_list:
-            x = 1 << (limit)  # to start already at desired size for r
-            for i in range(len(sign)):
-                if sign[i] == 0:
-                    x += 1 << item[i]
-                else:
-                    x -= 1 << item[i]
-            r = scalar_func(x)
-            if r.nbits() > 511:
-                continue
-            if gcd_small_primes(r) is None:
-                continue
-            if r.is_prime():
-                w = len(item) + 1
-                adicity = twoadicity(r)
-                p = base_func(x, r)
-                bin_x = f"2^{limit}"
-                for i in reversed(range(0, len(sign))):
-                    if sign[i] == 0:
-                        bin_x += f" + 2^{item[i]}"
-                    else:
-                        bin_x += f" - 2^{item[i]}"
-                if p.is_prime():
-                    L = [x]
-                    if extended:
-                        L.append(len(item) + 1)
-                    else:
-                        L.append(w)
-                    L.append(bin_x)
-                    L.append(adicity)
-                    if construct_curve:
-                        coeff_b = 1
+        x = 1 << (limit)  # to start already at desired size for r
+        for i in item:
+            x += 1 << i
+        r = scalar_func(x)
+        if r.nbits() > 511:
+            continue
+        if gcd_small_primes(r) is None:
+            continue
+        if r.is_prime():
+            w = len(item) + 1
+            adicity = twoadicity(r)
+            p = base_func(x, r)
+            bin_x = f"2^{limit}"
+            for i in reversed(item):
+                bin_x += f" + 2^{i}"
+            if p.is_prime():
+                L = [x]
+                L.append(w)
+                L.append(bin_x)
+                L.append(adicity)
+                if construct_curve:
+                    coeff_b = 1
+                    E = EllipticCurve(GF(p), [0, coeff_b])
+                    while E.order() % r != 0:
+                        coeff_b += 1
                         E = EllipticCurve(GF(p), [0, coeff_b])
-                        while E.order() % r != 0:
-                            coeff_b += 1
-                            E = EllipticCurve(GF(p), [0, coeff_b])
-                        L.append(coeff_b)
-                    output_list.append(L)
-                    count += 1
-                p = base_func(-x, r)
-                if p.is_prime():
-                    bin_x = "-(" + bin_x + ")"
-                    L = [-x]
-                    if extended:
-                        L.append(len(item) + 1)
-                    else:
-                        L.append(w)
-                    L.append(bin_x)
-                    L.append(adicity)
-                    if construct_curve:
-                        coeff_b = 1
+                    L.append(coeff_b)
+                output_list.append(L)
+                count += 1
+            p = base_func(-x, r)
+            if p.is_prime():
+                bin_x = "-(" + bin_x + ")"
+                L = [-x]
+                L.append(w)
+                L.append(bin_x)
+                L.append(adicity)
+                if construct_curve:
+                    coeff_b = 1
+                    E = EllipticCurve(GF(p), [0, coeff_b])
+                    while E.order() % r != 0:
+                        coeff_b += 1
                         E = EllipticCurve(GF(p), [0, coeff_b])
-                        while E.order() % r != 0:
-                            coeff_b += 1
-                            E = EllipticCurve(GF(p), [0, coeff_b])
-                        L.append(coeff_b)
-                    output_list.append(L)
-                    count += 1
+                    L.append(coeff_b)
+                output_list.append(L)
+                count += 1
     return (output_list, count)
 
 
@@ -286,7 +262,7 @@ def main():
         print("""
 Cmd: sage find_bls.sage [--sequential] [--conservative] [--sort_adicity] [--silent]
                         [--save] [--bls24] [--bls48] [--construct_curve]
-                          <min-2adicity> [<min-weight> [<max-weight>]]
+                          <min-2adicity> <max-weight>
 
 Args:
     --sequential        Uses only one process
@@ -298,15 +274,14 @@ Args:
     --silent            Ignores stats at each search step
     --save              Saves list into csv file
     --construct_curve   Finds coefficient B to build the corresponding curve y^2 = x^3 + B.
-    <min-2adicity>      Minimum two-adicity of the scalar field of BLS
-    <min-weight>        Minimum Hamming weight to start lookup
-    <max-weight>        Maximum Hamming weight to end lookup
+    <min-2adicity>      Minimum two-adicity of the scalar field of BLS, default 20
+    <max-weight>        Maximum Hamming weight to end lookup, default 6
 """)
         return
 
-    adicity = int(args[0])
-    min_weight = max(int(args[1]), 2) if len(args) > 1 else 2
-    max_weight = max(int(args[2]), min_weight) if len(args) > 2 else 6
+    adicity = int(args[0])if len(args) > 0 else 20
+    min_weight = 1
+    max_weight = max(int(args[1]), 2) if len(args) > 1 else 6
 
     result_list = []
     async_result_list = []
@@ -314,9 +289,9 @@ Args:
     def collect_result(result):
         async_result_list.append(result)
 
-    if processes == 1 or min_weight == max_weight:
+    if processes == 1:
         result_list = strategy(
-            adicity, min_weight, max_weight, conservative, 0, 1, extended, not silent)
+            adicity, min_weight, max_weight+1, conservative, 0, 1, not silent)
     else:
         if not silent:
             print(f"Using {processes} processes.")
@@ -324,7 +299,7 @@ Args:
 
         for wid in range(processes):
             pool.apply_async(worker, (strategy, adicity, min_weight, max_weight, conservative,
-                             construct_curve, wid, processes, extended, not silent), callback=collect_result)
+                             construct_curve, wid, processes, not silent), callback=collect_result)
 
         pool.close()
         pool.join()
@@ -352,8 +327,6 @@ Args:
                 adicity, min_weight, max_weight)
         if conservative:
             filename += "_conservative"
-        if extended:
-            filename += "_extended"
         filename += ".csv"
         f = open(filename, 'w')
         writer = csv.writer(f)
