@@ -227,7 +227,7 @@ def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_fun
                     else:
                         output_list.append([x, w, bin_x, adicity])
                     count += 1
-                p = bls48_base(-x, r)
+                p = base_func(-x, r)
                 if p.is_pseudoprime():
                     bin_x = "-(" + bin_x + ")"
                     if extended:
