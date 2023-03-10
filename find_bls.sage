@@ -332,20 +332,12 @@ Args:
             result_list += i
 
     if len(result_list) > 1:
-        if extended:
-            if sortadicity:
-                # sorting by 2-adicity first
-                result_list.sort(key=lambda x: (x[3], -x[1]))
-            else:
-                # sorting by weight first
-                result_list.sort(key=lambda x: (-x[1], x[3]))
+        if sortadicity:
+            # sorting by 2-adicity first
+            result_list.sort(key=lambda x: (x[3], -x[1]))
         else:
-            if sortadicity:
-                # sorting by 2-adicity first
-                result_list.sort(key=lambda x: (x[3], -x[1]))
-            else:
-                # sorting by weight first
-                result_list.sort(key=lambda x: (-x[1], x[3]))
+            # sorting by weight first
+            result_list.sort(key=lambda x: (-x[1], x[3]))
         result_list.reverse()
 
     if save:
