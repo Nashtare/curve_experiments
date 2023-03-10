@@ -210,7 +210,7 @@ def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_fun
                 continue
             if gcd_small_primes(r) is None:
                 continue
-            if r.is_pseudoprime():
+            if r.is_prime():
                 w = len(item) + 1
                 adicity = twoadicity(r)
                 p = base_func(x, r)
@@ -220,7 +220,7 @@ def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_fun
                         bin_x += f" + 2^{item[i]}"
                     else:
                         bin_x += f" - 2^{item[i]}"
-                if p.is_pseudoprime():
+                if p.is_prime():
                     if extended:
                         output_list.append(
                             [x, len(item) + 1, bin_x, adicity])
@@ -228,7 +228,7 @@ def generate_fields(limit, extended, weight_list, signed_weight_list, scalar_fun
                         output_list.append([x, w, bin_x, adicity])
                     count += 1
                 p = base_func(-x, r)
-                if p.is_pseudoprime():
+                if p.is_prime():
                     bin_x = "-(" + bin_x + ")"
                     if extended:
                         output_list.append(
